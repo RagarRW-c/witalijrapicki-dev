@@ -28,6 +28,9 @@ def handler(event, context):
 
         if 'multipart/form-data' in content_type.lower():
             print("DEBUG: Multipart detected")
+            if 'boundary=' not in content_type:
+                raise ValueError("Brak boundary w multipart")
+
             boundary = content_type.split("boundary=")[1].strip()
             print("DEBUG: Boundary:", boundary)
 
