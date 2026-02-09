@@ -2,8 +2,10 @@ import json
 import boto3
 from botocore.exceptions import ClientError
 import os
-from email.parser import BytesParser
-from email.policy import default
+import base64
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.mime.application import MIMEApplication
 
 ses_client = boto3.client('ses', region_name='eu-central-1')
 
@@ -13,32 +15,28 @@ FROM_EMAIL = os.environ['FROM_EMAIL']
 def handler(event, context):
     print("DEBUG: Handler started")
     print("DEBUG: Event keys:", list(event.keys()))
-    print("DEBUG: Headers:", event.get('headers', {}))
-    print("DEBUG: Body type:", type(event.get('body')))
 
     try:
         content_type = event['headers'].get('content-type', '') or event['headers'].get('Content-Type', '')
         body = event['body']
 
         name = 'Anonim'
-        email = 'brak emaila'
+        email = 'brak@emaila'
         subject = 'Wiadomość z formularza'
         message = 'Brak treści'
         attachment = None
 
         if 'multipart/form-data' in content_type.lower():
             print("DEBUG: Multipart detected")
-            if 'boundary=' not in content_type:
-                raise ValueError("Brak boundary w multipart")
-
             boundary = content_type.split("boundary=")[1].strip()
             print("DEBUG: Boundary:", boundary)
 
-            # Parsowanie multipart
+            # Parsujemy multipart
+            from email.parser import BytesParser
+            from email.policy import default
             msg_bytes = body.encode('utf-8') if isinstance(body, str) else body
             msg = BytesParser(policy=default).parsebytes(msg_bytes)
 
-            # Pobieranie pól tekstowych
             for part in msg.walk():
                 if part.get_content_maintype() == 'multipart':
                     continue
@@ -62,7 +60,7 @@ def handler(event, context):
                             'content_type': part.get_content_type(),
                             'content': part.get_payload(decode=True)
                         }
-                        print("DEBUG: Załącznik znaleziony:", filename)
+                        print("DEBUG: Załącznik znaleziony:", filename, "rozmiar:", len(attachment['content']))
 
         else:
             print("DEBUG: JSON detected")
@@ -73,29 +71,33 @@ def handler(event, context):
             message = body_dict.get('message', 'Brak treści')
             attachment = None
 
-        # Budujemy treść maila
-        email_body = f"""
+        # Budujemy MIME wiadomość
+        msg = MIMEMultipart()
+        msg['Subject'] = subject
+        msg['From'] = FROM_EMAIL
+        msg['To'] = TO_EMAIL
+
+        # Tekstowa część
+        msg.attach(MIMEText(f"""
 Od: {name} <{email}>
 Temat: {subject}
 
 Wiadomość:
 {message}
-        """
+        """, 'plain', 'utf-8'))
 
+        # Załącznik (jeśli jest)
         if attachment:
-            email_body += f"\n\nZałącznik: {attachment['filename']} (rozmiar: {len(attachment['content'])} bajtów)"
+            part = MIMEApplication(attachment['content'], _subtype=attachment['content_type'].split('/')[-1] or 'octet-stream')
+            part.add_header('Content-Disposition', 'attachment', filename=attachment['filename'])
+            msg.attach(part)
 
-        print("DEBUG: Sending email from:", FROM_EMAIL)
-        print("DEBUG: To:", TO_EMAIL)
-        print("DEBUG: Subject:", subject)
+        raw_message = msg.as_bytes()  # MIME jako bytes
 
-        response = ses_client.send_email(
+        response = ses_client.send_raw_email(
             Source=FROM_EMAIL,
-            Destination={'ToAddresses': [TO_EMAIL]},
-            Message={
-                'Subject': {'Data': subject},
-                'Body': {'Text': {'Data': email_body}}
-            }
+            Destinations=[TO_EMAIL],
+            RawMessage={'Data': raw_message}
         )
 
         print("DEBUG: Email sent, MessageId:", response['MessageId'])
