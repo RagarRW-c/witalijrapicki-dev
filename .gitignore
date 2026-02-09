@@ -31,3 +31,5 @@ yarn-error.log*
 terraform.tfstate
 terraform.tfstate.backup
 *.tfstate.*
+
+lambda/*.zip

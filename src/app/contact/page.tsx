@@ -7,6 +7,9 @@ import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Mail, Linkedin, Github, Send, Paperclip, X } from "lucide-react"
+import { toast } from "sonner" // jeśli używasz sonner do powiadomień
+
+const API_ENDPOINT = "https://d5zxry52fj.execute-api.eu-central-1.amazonaws.com/prod/contact"
 
 export default function ContactPage() {
   const [formData, setFormData] = useState({
@@ -27,40 +30,56 @@ export default function ContactPage() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0]
     if (selectedFile) {
-      // Limit rozmiaru np. 5 MB
       if (selectedFile.size > 5 * 1024 * 1024) {
-        alert("Plik jest za duży. Maksymalny rozmiar: 5 MB")
+        toast.error("Plik za duży", { description: "Maksymalny rozmiar: 5 MB" })
         return
       }
       setFile(selectedFile)
     }
   }
 
-  const removeFile = () => {
-    setFile(null)
-  }
+  const removeFile = () => setFile(null)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
 
-    // Tutaj będzie prawdziwe wysyłanie (tymczasowo symulacja)
-    await new Promise((resolve) => setTimeout(resolve, 1500))
+    const data = new FormData()
+    data.append("name", formData.name)
+    data.append("email", formData.email)
+    data.append("subject", formData.subject)
+    data.append("message", formData.message)
+    if (file) {
+      data.append("attachment", file)
+    }
 
-    console.log("Dane formularza:", formData)
-    console.log("Załącznik:", file?.name)
+    try {
+      const response = await fetch(API_ENDPOINT, {
+        method: "POST",
+        body: data,
+      })
 
-    alert("Wiadomość + załącznik wysłane! (symulacja)")
+      const result = await response.json()
 
-    setSubmitted(true)
-    setIsSubmitting(false)
-
-    // Reset po sukcesie
-    setTimeout(() => {
-      setFormData({ name: "", email: "", subject: "", message: "" })
-      setFile(null)
-      setSubmitted(false)
-    }, 4000)
+      if (response.ok) {
+        toast.success("Wiadomość wysłana!", {
+          description: "Dzięki! Odpowiem najszybciej jak mogę.",
+        })
+        setSubmitted(true)
+        setFormData({ name: "", email: "", subject: "", message: "" })
+        setFile(null)
+      } else {
+        toast.error("Błąd wysyłania", {
+          description: result.error || "Spróbuj ponownie lub napisz bezpośrednio na email.",
+        })
+      }
+    } catch (err) {
+      toast.error("Błąd połączenia", {
+        description: "Sprawdź połączenie internetowe i spróbuj ponownie.",
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -140,7 +159,7 @@ export default function ContactPage() {
                   />
                 </div>
 
-                {/* Pole na załącznik */}
+                {/* Załącznik */}
                 <div className="grid gap-2">
                   <Label htmlFor="file">Załącznik (opcjonalny)</Label>
                   <div className="flex items-center gap-3">
