@@ -6,10 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Mail, Linkedin, Github, Send, Paperclip, X, CheckCircle } from "lucide-react"
-import { toast } from "sonner" // jeśli nie używasz sonner, możesz usunąć i użyć alert
-
-const API_ENDPOINT = "https://d5zxry52fj.execute-api.eu-central-1.amazonaws.com/prod/contact"
+import { Mail, Linkedin, Github, Send, Paperclip, X } from "lucide-react"
 
 export default function ContactPage() {
   const [formData, setFormData] = useState({
@@ -30,55 +27,40 @@ export default function ContactPage() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0]
     if (selectedFile) {
+      // Limit rozmiaru np. 5 MB
       if (selectedFile.size > 5 * 1024 * 1024) {
-        toast.error("Plik za duży", { description: "Maksymalny rozmiar: 5 MB" })
+        alert("Plik jest za duży. Maksymalny rozmiar: 5 MB")
         return
       }
       setFile(selectedFile)
     }
   }
 
-  const removeFile = () => setFile(null)
+  const removeFile = () => {
+    setFile(null)
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
 
-    const data = new FormData()
-    data.append("name", formData.name)
-    data.append("email", formData.email)
-    data.append("subject", formData.subject)
-    data.append("message", formData.message)
-    if (file) data.append("attachment", file)
+    // Tutaj będzie prawdziwe wysyłanie (tymczasowo symulacja)
+    await new Promise((resolve) => setTimeout(resolve, 1500))
 
-    try {
-      const response = await fetch(API_ENDPOINT, {
-        method: "POST",
-        body: data,
-      })
+    console.log("Dane formularza:", formData)
+    console.log("Załącznik:", file?.name)
 
-      const result = await response.json()
+    alert("Wiadomość + załącznik wysłane! (symulacja)")
 
-      if (response.ok) {
-        toast.success("Wiadomość wysłana!", {
-          description: "Dzięki! Odpowiem najszybciej jak mogę.",
-        })
-        setSubmitted(true)
-        setFormData({ name: "", email: "", subject: "", message: "" })
-        setFile(null)
-      } else {
-        toast.error("Błąd wysyłania", {
-          description: result.error || "Spróbuj ponownie lub napisz bezpośrednio na email.",
-        })
-      }
-    } catch (err) {
-      console.error("Błąd fetch:", err)
-      toast.error("Błąd połączenia", {
-        description: "Sprawdź połączenie internetowe i spróbuj ponownie.",
-      })
-    } finally {
-      setIsSubmitting(false)
-    }
+    setSubmitted(true)
+    setIsSubmitting(false)
+
+    // Reset po sukcesie
+    setTimeout(() => {
+      setFormData({ name: "", email: "", subject: "", message: "" })
+      setFile(null)
+      setSubmitted(false)
+    }, 4000)
   }
 
   return (
@@ -98,23 +80,13 @@ export default function ContactPage() {
           </CardHeader>
           <CardContent>
             {submitted ? (
-              <div className="text-center py-12 space-y-4">
-                <CheckCircle className="h-16 w-16 mx-auto text-green-500" />
-                <h3 className="text-2xl font-bold text-foreground">Wiadomość została wysłana!</h3>
-                <p className="text-lg text-muted-foreground">
-                  Dziękuję za kontakt. Odpowiem najszybciej jak to możliwe (zwykle w ciągu 24–48 h).
+              <div className="text-center py-12">
+                <Send className="h-12 w-12 mx-auto text-primary mb-4" />
+                <h3 className="text-xl font-semibold mb-2">Dzięki za wiadomość!</h3>
+                <p className="text-muted-foreground">
+                  {file ? "Załącznik został wysłany." : ""}
+                  Odpowiem najszybciej jak mogę.
                 </p>
-                <p className="text-sm text-muted-foreground">
-                  Sprawdź proszę skrzynkę spamu, jeśli mail nie przyjdzie w ciągu kilku minut.
-                </p>
-                <Button
-                  variant="outline"
-                  size="lg"
-                  onClick={() => setSubmitted(false)}
-                  className="mt-4"
-                >
-                  Wyślij kolejną wiadomość
-                </Button>
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-6">
@@ -168,6 +140,7 @@ export default function ContactPage() {
                   />
                 </div>
 
+                {/* Pole na załącznik */}
                 <div className="grid gap-2">
                   <Label htmlFor="file">Załącznik (opcjonalny)</Label>
                   <div className="flex items-center gap-3">
@@ -214,7 +187,7 @@ export default function ContactPage() {
           </CardContent>
         </Card>
 
-        {/* Dane kontaktowe */}
+        {/* Dane kontaktowe – bez zmian */}
         <div className="space-y-8">
           <Card className="bg-card/80 backdrop-blur-sm border-border/50">
             <CardHeader>
