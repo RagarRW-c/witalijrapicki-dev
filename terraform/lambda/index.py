@@ -11,16 +11,12 @@ from email.mime.text import MIMEText
 from email.mime.application import MIMEApplication
 from email.header import Header
 
-# ===== KONFIGURACJA =====
-
 ses_client = boto3.client("ses", region_name="eu-central-1")
 
 TO_EMAIL = os.environ["TO_EMAIL"]
 FROM_EMAIL = os.environ["FROM_EMAIL"]
 
-MAX_ATTACHMENT_SIZE = 8 * 1024 * 1024  # 8 MB (bezpieczny limit)
-
-# ===== HANDLER =====
+MAX_ATTACHMENT_SIZE = 8 * 1024 * 1024  # 8 MB
 
 def handler(event, context):
     try:
@@ -33,11 +29,8 @@ def handler(event, context):
         message = "Brak treści"
         attachment = None
 
-        # =====================================================
         # MULTIPART / FORM-DATA
-        # =====================================================
         if "multipart/form-data" in content_type.lower():
-
             if event.get("isBase64Encoded"):
                 body_bytes = base64.b64decode(event["body"])
             else:
@@ -64,35 +57,26 @@ def handler(event, context):
                 fileitem = form["attachment"]
                 if fileitem.filename:
                     file_content = fileitem.file.read()
-
                     if len(file_content) > MAX_ATTACHMENT_SIZE:
                         raise ValueError("Załącznik przekracza limit rozmiaru")
-
                     attachment = {
                         "filename": fileitem.filename,
                         "content_type": fileitem.type or "application/octet-stream",
                         "content": file_content,
                     }
 
-        # =====================================================
         # JSON BODY
-        # =====================================================
         else:
             body = event.get("body", "{}")
-
             if event.get("isBase64Encoded"):
                 body = base64.b64decode(body).decode("utf-8")
-
             data = json.loads(body)
-
             name = data.get("name", name)
             email = data.get("email", email)
             subject = data.get("subject", subject)
             message = data.get("message", message)
 
-        # =====================================================
         # BUDOWA EMAILA
-        # =====================================================
         msg = MIMEMultipart()
         msg["From"] = FROM_EMAIL
         msg["To"] = TO_EMAIL
@@ -100,7 +84,6 @@ def handler(event, context):
         msg["Subject"] = Header(subject, "utf-8")
 
         body_text = f"""Od: {name} <{email}>
-
 Wiadomość:
 {message}
 """
@@ -119,9 +102,7 @@ Wiadomość:
             )
             msg.attach(part)
 
-        # =====================================================
         # SES SEND
-        # =====================================================
         ses_client.send_raw_email(
             Source=FROM_EMAIL,
             Destinations=[TO_EMAIL],
