@@ -1,124 +1,149 @@
 import json
 import boto3
-from botocore.exceptions import ClientError
 import os
 import base64
+import io
+import cgi
+
+from botocore.exceptions import ClientError
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.application import MIMEApplication
+from email.header import Header
 
-ses_client = boto3.client('ses', region_name='eu-central-1')
+# ===== KONFIGURACJA =====
 
-TO_EMAIL = os.environ['TO_EMAIL']
-FROM_EMAIL = os.environ['FROM_EMAIL']
+ses_client = boto3.client("ses", region_name="eu-central-1")
+
+TO_EMAIL = os.environ["TO_EMAIL"]
+FROM_EMAIL = os.environ["FROM_EMAIL"]
+
+MAX_ATTACHMENT_SIZE = 8 * 1024 * 1024  # 8 MB (bezpieczny limit)
+
+# ===== HANDLER =====
 
 def handler(event, context):
-    print("DEBUG: Handler started")
-    print("DEBUG: Event keys:", list(event.keys()))
-
     try:
-        content_type = event['headers'].get('content-type', '') or event['headers'].get('Content-Type', '')
-        body = event['body']
+        headers = event.get("headers") or {}
+        content_type = headers.get("content-type") or headers.get("Content-Type", "")
 
-        name = 'Anonim'
-        email = 'brak@emaila'
-        subject = 'Wiadomość z formularza'
-        message = 'Brak treści'
+        name = "Anonim"
+        email = "brak@emaila"
+        subject = "Wiadomość z formularza"
+        message = "Brak treści"
         attachment = None
 
-        if 'multipart/form-data' in content_type.lower():
-            print("DEBUG: Multipart detected")
-            if 'boundary=' not in content_type:
-                raise ValueError("Brak boundary w multipart")
+        # =====================================================
+        # MULTIPART / FORM-DATA
+        # =====================================================
+        if "multipart/form-data" in content_type.lower():
 
-            boundary = content_type.split("boundary=")[1].strip()
-            print("DEBUG: Boundary:", boundary)
+            if event.get("isBase64Encoded"):
+                body_bytes = base64.b64decode(event["body"])
+            else:
+                body_bytes = event["body"].encode("utf-8")
 
-            # Parsujemy multipart
-            from email.parser import BytesParser
-            from email.policy import default
-            msg_bytes = body.encode('utf-8') if isinstance(body, str) else body
-            msg = BytesParser(policy=default).parsebytes(msg_bytes)
+            environ = {
+                "REQUEST_METHOD": "POST",
+                "CONTENT_TYPE": content_type,
+                "CONTENT_LENGTH": str(len(body_bytes)),
+            }
 
-            for part in msg.walk():
-                if part.get_content_maintype() == 'multipart':
-                    continue
-                if part.get('Content-Disposition') is None:
-                    continue
+            form = cgi.FieldStorage(
+                fp=io.BytesIO(body_bytes),
+                environ=environ,
+                keep_blank_values=True,
+            )
 
-                field_name = part.get_param('name', header='content-disposition')
-                if field_name == 'name':
-                    name = part.get_payload(decode=True).decode('utf-8', errors='ignore')
-                elif field_name == 'email':
-                    email = part.get_payload(decode=True).decode('utf-8', errors='ignore')
-                elif field_name == 'subject':
-                    subject = part.get_payload(decode=True).decode('utf-8', errors='ignore')
-                elif field_name == 'message':
-                    message = part.get_payload(decode=True).decode('utf-8', errors='ignore')
-                elif field_name == 'attachment':
-                    filename = part.get_filename()
-                    if filename:
-                        attachment = {
-                            'filename': filename,
-                            'content_type': part.get_content_type(),
-                            'content': part.get_payload(decode=True)
-                        }
-                        print("DEBUG: Załącznik znaleziony:", filename, "rozmiar:", len(attachment['content']))
+            name = form.getvalue("name", name)
+            email = form.getvalue("email", email)
+            subject = form.getvalue("subject", subject)
+            message = form.getvalue("message", message)
 
+            if "attachment" in form:
+                fileitem = form["attachment"]
+                if fileitem.filename:
+                    file_content = fileitem.file.read()
+
+                    if len(file_content) > MAX_ATTACHMENT_SIZE:
+                        raise ValueError("Załącznik przekracza limit rozmiaru")
+
+                    attachment = {
+                        "filename": fileitem.filename,
+                        "content_type": fileitem.type or "application/octet-stream",
+                        "content": file_content,
+                    }
+
+        # =====================================================
+        # JSON BODY
+        # =====================================================
         else:
-            print("DEBUG: JSON detected")
-            body_dict = json.loads(body)
-            name = body_dict.get('name', 'Anonim')
-            email = body_dict.get('email', 'brak emaila')
-            subject = body_dict.get('subject', 'Wiadomość z formularza')
-            message = body_dict.get('message', 'Brak treści')
-            attachment = None
+            body = event.get("body", "{}")
 
-        # Budujemy MIME wiadomość
+            if event.get("isBase64Encoded"):
+                body = base64.b64decode(body).decode("utf-8")
+
+            data = json.loads(body)
+
+            name = data.get("name", name)
+            email = data.get("email", email)
+            subject = data.get("subject", subject)
+            message = data.get("message", message)
+
+        # =====================================================
+        # BUDOWA EMAILA
+        # =====================================================
         msg = MIMEMultipart()
-        msg['Subject'] = subject
-        msg['From'] = FROM_EMAIL
-        msg['To'] = TO_EMAIL
+        msg["From"] = FROM_EMAIL
+        msg["To"] = TO_EMAIL
+        msg["Reply-To"] = email
+        msg["Subject"] = Header(subject, "utf-8")
 
-        # Tekstowa część
-        msg.attach(MIMEText(f"""
-Od: {name} <{email}>
-Temat: {subject}
+        body_text = f"""Od: {name} <{email}>
 
 Wiadomość:
 {message}
-        """, 'plain', 'utf-8'))
+"""
 
-        # Załącznik (jeśli jest)
+        msg.attach(MIMEText(body_text, "plain", "utf-8"))
+
         if attachment:
-            part = MIMEApplication(attachment['content'], _subtype=attachment['content_type'].split('/')[-1] or 'octet-stream')
-            part.add_header('Content-Disposition', 'attachment', filename=attachment['filename'])
+            part = MIMEApplication(
+                attachment["content"],
+                _subtype=attachment["content_type"].split("/")[-1],
+            )
+            part.add_header(
+                "Content-Disposition",
+                "attachment",
+                filename=attachment["filename"],
+            )
             msg.attach(part)
 
-        raw_message = msg.as_bytes()  # MIME jako bytes
-
-        response = ses_client.send_raw_email(
+        # =====================================================
+        # SES SEND
+        # =====================================================
+        ses_client.send_raw_email(
             Source=FROM_EMAIL,
             Destinations=[TO_EMAIL],
-            RawMessage={'Data': raw_message}
+            RawMessage={"Data": msg.as_bytes()},
         )
 
-        print("DEBUG: Email sent, MessageId:", response['MessageId'])
-
         return {
-            'statusCode': 200,
-            'body': json.dumps({'message': 'Wiadomość wysłana!'})
+            "statusCode": 200,
+            "headers": {"Content-Type": "application/json"},
+            "body": json.dumps({"message": "Wiadomość wysłana"}),
         }
 
     except ClientError as e:
-        print("DEBUG: SES ClientError:", str(e))
+        print("SES error:", str(e))
         return {
-            'statusCode': 500,
-            'body': json.dumps({'error': str(e)})
+            "statusCode": 500,
+            "body": json.dumps({"error": "Błąd SES"}),
         }
+
     except Exception as e:
-        print("DEBUG: General error:", str(e))
+        print("Handler error:", str(e))
         return {
-            'statusCode': 500,
-            'body': json.dumps({'error': 'Błąd serwera'})
+            "statusCode": 500,
+            "body": json.dumps({"error": "Błąd serwera"}),
         }
