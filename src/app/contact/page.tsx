@@ -6,8 +6,8 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Mail, Linkedin, Github, Send, Paperclip, X } from "lucide-react"
-import { toast } from "sonner" // jeśli używasz sonner do powiadomień
+import { Mail, Linkedin, Github, Send, Paperclip, X, CheckCircle } from "lucide-react"
+import { toast } from "sonner" // jeśli nie używasz sonner, możesz usunąć i użyć alert
 
 const API_ENDPOINT = "https://d5zxry52fj.execute-api.eu-central-1.amazonaws.com/prod/contact"
 
@@ -49,9 +49,7 @@ export default function ContactPage() {
     data.append("email", formData.email)
     data.append("subject", formData.subject)
     data.append("message", formData.message)
-    if (file) {
-      data.append("attachment", file)
-    }
+    if (file) data.append("attachment", file)
 
     try {
       const response = await fetch(API_ENDPOINT, {
@@ -74,6 +72,7 @@ export default function ContactPage() {
         })
       }
     } catch (err) {
+      console.error("Błąd fetch:", err)
       toast.error("Błąd połączenia", {
         description: "Sprawdź połączenie internetowe i spróbuj ponownie.",
       })
@@ -99,13 +98,23 @@ export default function ContactPage() {
           </CardHeader>
           <CardContent>
             {submitted ? (
-              <div className="text-center py-12">
-                <Send className="h-12 w-12 mx-auto text-primary mb-4" />
-                <h3 className="text-xl font-semibold mb-2">Dzięki za wiadomość!</h3>
-                <p className="text-muted-foreground">
-                  {file ? "Załącznik został wysłany." : ""}
-                  Odpowiem najszybciej jak mogę.
+              <div className="text-center py-12 space-y-4">
+                <CheckCircle className="h-16 w-16 mx-auto text-green-500" />
+                <h3 className="text-2xl font-bold text-foreground">Wiadomość została wysłana!</h3>
+                <p className="text-lg text-muted-foreground">
+                  Dziękuję za kontakt. Odpowiem najszybciej jak to możliwe (zwykle w ciągu 24–48 h).
                 </p>
+                <p className="text-sm text-muted-foreground">
+                  Sprawdź proszę skrzynkę spamu, jeśli mail nie przyjdzie w ciągu kilku minut.
+                </p>
+                <Button
+                  variant="outline"
+                  size="lg"
+                  onClick={() => setSubmitted(false)}
+                  className="mt-4"
+                >
+                  Wyślij kolejną wiadomość
+                </Button>
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-6">
@@ -159,7 +168,6 @@ export default function ContactPage() {
                   />
                 </div>
 
-                {/* Załącznik */}
                 <div className="grid gap-2">
                   <Label htmlFor="file">Załącznik (opcjonalny)</Label>
                   <div className="flex items-center gap-3">
@@ -206,7 +214,7 @@ export default function ContactPage() {
           </CardContent>
         </Card>
 
-        {/* Dane kontaktowe – bez zmian */}
+        {/* Dane kontaktowe */}
         <div className="space-y-8">
           <Card className="bg-card/80 backdrop-blur-sm border-border/50">
             <CardHeader>
