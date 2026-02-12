@@ -14,6 +14,8 @@ ses_client = boto3.client("ses", region_name="eu-central-1")
 TO_EMAIL = os.environ["TO_EMAIL"]
 FROM_EMAIL = os.environ["FROM_EMAIL"]
 
+MAX_ATTACHMENT_SIZE = 5 * 1024 * 1024  # 5 MB
+
 
 def cors_headers():
     return {
@@ -26,7 +28,6 @@ def cors_headers():
 
 def handler(event, context):
     print("🔥 LAMBDA INVOKED 🔥")
-    print("DEBUG: Handler started")
     print("DEBUG: isBase64Encoded:", event.get("isBase64Encoded"))
 
     try:
@@ -36,13 +37,16 @@ def handler(event, context):
         body = event.get("body") or ""
         is_base64 = event.get("isBase64Encoded", False)
 
-        # ✅ STANDARD decode for Lambda Proxy
+        # ✅ Standard Lambda Proxy handling
         if is_base64:
             print("DEBUG: Decoding base64 body")
             body_bytes = base64.b64decode(body)
         else:
-            print("DEBUG: Encoding body as utf-8")
-            body_bytes = body.encode("utf-8", errors="ignore")
+            print("⚠ WARNING: Body not base64 encoded (binary_media_types issue?)")
+            print("DEBUG: Encoding body as latin-1 fallback")
+            body_bytes = body.encode("latin-1", errors="ignore")
+
+        print(f"DEBUG: Body size: {len(body_bytes)} bytes")
 
         name = "Anonim"
         email = "brak@emaila"
@@ -50,7 +54,9 @@ def handler(event, context):
         message = "Brak treści"
         attachment = None
 
-        # ✅ MULTIPART parsing
+        # =========================
+        # ✅ MULTIPART FORM PARSING
+        # =========================
         if "multipart/form-data" in content_type.lower():
             print("DEBUG: Multipart detected")
 
@@ -82,28 +88,42 @@ def handler(event, context):
                     content = part.get_payload(decode=True)
 
                     if filename and content:
+                        size = len(content)
+
+                        print(
+                            f"DEBUG: Attachment → {filename}, size={size} bytes"
+                        )
+
+                        if size == 0:
+                            print("⚠ Attachment detected but empty")
+                            continue
+
+                        if size > MAX_ATTACHMENT_SIZE:
+                            raise Exception("Attachment too large")
+
                         attachment = {
                             "filename": filename,
                             "content_type": part.get_content_type(),
                             "content": content,
                         }
 
-                        print(
-                            f"DEBUG: Attachment → {filename}, size={len(content)} bytes"
-                        )
-
-        # ✅ JSON fallback
+        # =========================
+        # ✅ JSON FALLBACK
+        # =========================
         else:
             print("DEBUG: JSON detected")
 
             if body:
                 data = json.loads(body)
+
                 name = data.get("name", name)
                 email = data.get("email", email)
                 subject = data.get("subject", subject)
                 message = data.get("message", message)
 
-        # ✅ Build MIME email
+        # =========================
+        # ✅ BUILD MIME EMAIL
+        # =========================
         mime_msg = MIMEMultipart()
         mime_msg["Subject"] = subject
         mime_msg["From"] = FROM_EMAIL
@@ -121,27 +141,38 @@ def handler(event, context):
         if attachment:
             print("DEBUG: Attaching file")
 
-            part = MIMEApplication(
-                attachment["content"],
-                _subtype=attachment["content_type"].split("/")[-1],
+            content_type = attachment.get("content_type", "application/octet-stream")
+            subtype = (
+                content_type.split("/")[-1]
+                if "/" in content_type
+                else "octet-stream"
             )
-            part.add_header(
+
+            file_part = MIMEApplication(
+                attachment["content"],
+                _subtype=subtype,
+            )
+
+            file_part.add_header(
                 "Content-Disposition",
                 "attachment",
                 filename=attachment["filename"],
             )
-            mime_msg.attach(part)
+
+            mime_msg.attach(file_part)
 
         raw_message = mime_msg.as_bytes()
 
-        # ✅ Send via SES
+        # =========================
+        # ✅ SEND EMAIL VIA SES
+        # =========================
         response = ses_client.send_raw_email(
             Source=FROM_EMAIL,
             Destinations=[TO_EMAIL],
             RawMessage={"Data": raw_message},
         )
 
-        print("DEBUG: Email sent:", response["MessageId"])
+        print("✅ Email sent:", response["MessageId"])
 
         return {
             "statusCode": 200,
@@ -150,7 +181,7 @@ def handler(event, context):
         }
 
     except ClientError as e:
-        print("DEBUG: SES error:", str(e))
+        print("❌ SES ClientError:", str(e))
 
         return {
             "statusCode": 500,
@@ -159,10 +190,10 @@ def handler(event, context):
         }
 
     except Exception as e:
-        print("DEBUG: General error:", str(e))
+        print("❌ General error:", str(e))
 
         return {
             "statusCode": 500,
             "headers": cors_headers(),
-            "body": json.dumps({"error": "Błąd serwera"}),
+            "body": json.dumps({"error": str(e)}),
         }

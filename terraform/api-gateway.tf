@@ -6,9 +6,7 @@ resource "aws_api_gateway_rest_api" "contact_api" {
   description = "API do formularza kontaktowego z załącznikiem"
 
   binary_media_types = [
-    "multipart/form-data",
-    "application/octet-stream"
-  ]
+    "multipart/form-data", "*/*"  ]
 
   endpoint_configuration {
     types = ["REGIONAL"]
@@ -50,6 +48,7 @@ resource "aws_api_gateway_integration" "contact_lambda" {
   integration_http_method = "POST"
   type                    = "AWS_PROXY"
   uri                     = aws_lambda_function.contact_form.invoke_arn
+  content_handling = "CONVERT_TO_BINARY"
 }
 
 # CORS dla POST – nagłówki odpowiedzi (to jest brakujący element!)
