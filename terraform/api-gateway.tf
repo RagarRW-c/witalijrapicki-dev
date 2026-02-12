@@ -4,6 +4,7 @@
 resource "aws_api_gateway_rest_api" "contact_api" {
   name        = "contact-form-api"
   description = "API do formularza kontaktowego z załącznikiem"
+  binary_media_types = ["multipart/form-data"]
 
   endpoint_configuration {
     types = ["REGIONAL"]
