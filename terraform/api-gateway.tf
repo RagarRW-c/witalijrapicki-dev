@@ -1,4 +1,6 @@
-# API Gateway – REST API z endpointem POST /contact
+########################################
+# API Gateway – REST API
+########################################
 resource "aws_api_gateway_rest_api" "contact_api" {
   name        = "contact-form-api"
   description = "API do formularza kontaktowego z załącznikiem"
@@ -8,14 +10,18 @@ resource "aws_api_gateway_rest_api" "contact_api" {
   }
 }
 
-# Resource /contact
+########################################
+# Resource: /contact
+########################################
 resource "aws_api_gateway_resource" "contact" {
   rest_api_id = aws_api_gateway_rest_api.contact_api.id
   parent_id   = aws_api_gateway_rest_api.contact_api.root_resource_id
   path_part   = "contact"
 }
 
-# Metoda POST /contact
+########################################
+# POST /contact
+########################################
 resource "aws_api_gateway_method" "contact_post" {
   rest_api_id   = aws_api_gateway_rest_api.contact_api.id
   resource_id   = aws_api_gateway_resource.contact.id
@@ -23,7 +29,6 @@ resource "aws_api_gateway_method" "contact_post" {
   authorization = "NONE"
 }
 
-# Integracja POST z Lambdą (AWS_PROXY – najwydajniejsza)
 resource "aws_api_gateway_integration" "contact_lambda" {
   rest_api_id             = aws_api_gateway_rest_api.contact_api.id
   resource_id             = aws_api_gateway_resource.contact.id
@@ -73,7 +78,9 @@ resource "aws_api_gateway_integration_response" "post_integration_response" {
   ]
 }
 
-# Metoda OPTIONS /contact – preflight CORS
+########################################
+# OPTIONS /contact – preflight CORS
+########################################
 resource "aws_api_gateway_method" "contact_options" {
   rest_api_id   = aws_api_gateway_rest_api.contact_api.id
   resource_id   = aws_api_gateway_resource.contact.id
@@ -126,7 +133,9 @@ resource "aws_api_gateway_integration_response" "options_integration_response" {
   }
 }
 
-# Deployment – redeploy przy każdej zmianie w API
+########################################
+# Deployment + Stage
+########################################
 resource "aws_api_gateway_deployment" "contact_deployment" {
   rest_api_id = aws_api_gateway_rest_api.contact_api.id
 
@@ -149,7 +158,6 @@ resource "aws_api_gateway_deployment" "contact_deployment" {
   }
 }
 
-# Stage "prod"
 resource "aws_api_gateway_stage" "prod" {
   rest_api_id   = aws_api_gateway_rest_api.contact_api.id
   deployment_id = aws_api_gateway_deployment.contact_deployment.id
@@ -158,7 +166,9 @@ resource "aws_api_gateway_stage" "prod" {
   depends_on = [aws_api_gateway_deployment.contact_deployment]
 }
 
-# Pełny URL endpointu
+########################################
+# Output
+########################################
 output "api_gateway_endpoint" {
   description = "Pełny URL endpointu formularza (POST /contact)"
   value       = "${aws_api_gateway_stage.prod.invoke_url}/contact"
