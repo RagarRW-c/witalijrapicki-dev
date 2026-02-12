@@ -6,10 +6,11 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Mail, Linkedin, Github, Send, Paperclip, X } from "lucide-react"
+import { Paperclip, X } from "lucide-react"
 import { toast } from "sonner"
 
-const API_ENDPOINT = "https://d5zxry52fj.execute-api.eu-central-1.amazonaws.com/prod/contact"
+const API_ENDPOINT =
+  "https://d5zxry52fj.execute-api.eu-central-1.amazonaws.com/prod/contact"
 
 export default function ContactPage() {
   const [formData, setFormData] = useState({
@@ -18,23 +19,29 @@ export default function ContactPage() {
     subject: "",
     message: "",
   })
+
   const [file, setFile] = useState<File | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
     const { name, value } = e.target
     setFormData((prev) => ({ ...prev, [name]: value }))
   }
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0]
-    if (selectedFile) {
-      if (selectedFile.size > 5 * 1024 * 1024) {
-        toast.error("Plik za duży", { description: "Maksymalny rozmiar: 5 MB" })
-        return
-      }
-      setFile(selectedFile)
+    if (!selectedFile) return
+
+    if (selectedFile.size > 5 * 1024 * 1024) {
+      toast.error("Plik za duży", {
+        description: "Maksymalny rozmiar: 5 MB",
+      })
+      return
     }
+
+    setFile(selectedFile)
   }
 
   const removeFile = () => setFile(null)
@@ -51,27 +58,54 @@ export default function ContactPage() {
     if (file) data.append("attachment", file)
 
     try {
+      console.log("Submitting →", API_ENDPOINT)
+
       const response = await fetch(API_ENDPOINT, {
         method: "POST",
         body: data,
       })
 
+      console.log("Status:", response.status)
+
+      const rawText = await response.text()
+      console.log("Raw response:", rawText)
+
+      let result: any = {}
+
+      try {
+        result = rawText ? JSON.parse(rawText) : {}
+      } catch {
+        result = { raw: rawText }
+      }
+
       if (response.ok) {
         toast.success("Wiadomość wysłana!", {
-          description: "Dzięki! Odpowiem najszybciej jak mogę.",
+          description:
+            result?.message ||
+            "Dzięki! Odpowiem najszybciej jak mogę.",
         })
-        setFormData({ name: "", email: "", subject: "", message: "" })
+
+        setFormData({
+          name: "",
+          email: "",
+          subject: "",
+          message: "",
+        })
+
         setFile(null)
       } else {
-        const error = await response.json()
         toast.error("Błąd wysyłania", {
-          description: error.error || "Spróbuj ponownie lub napisz bezpośrednio na email.",
+          description:
+            result?.error ||
+            result?.raw ||
+            "Spróbuj ponownie.",
         })
       }
     } catch (err) {
-      console.error("Błąd fetch:", err)
+      console.error("Fetch error:", err)
+
       toast.error("Błąd połączenia", {
-        description: "Sprawdź połączenie internetowe i spróbuj ponownie.",
+        description: "Nie udało się połączyć z API.",
       })
     } finally {
       setIsSubmitting(false)
@@ -92,6 +126,7 @@ export default function ContactPage() {
               Możesz dołączyć plik (CV, PDF, do 5 MB)
             </CardDescription>
           </CardHeader>
+
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="grid gap-2">
@@ -101,7 +136,6 @@ export default function ContactPage() {
                   name="name"
                   value={formData.name}
                   onChange={handleChange}
-                  placeholder="Witalij Rapicki"
                   required
                 />
               </div>
@@ -114,7 +148,6 @@ export default function ContactPage() {
                   type="email"
                   value={formData.email}
                   onChange={handleChange}
-                  placeholder="witalijrapicki@gmail.com"
                   required
                 />
               </div>
@@ -126,7 +159,6 @@ export default function ContactPage() {
                   name="subject"
                   value={formData.subject}
                   onChange={handleChange}
-                  placeholder="Propozycja współpracy / Pytanie techniczne"
                   required
                 />
               </div>
@@ -138,7 +170,6 @@ export default function ContactPage() {
                   name="message"
                   value={formData.message}
                   onChange={handleChange}
-                  placeholder="Cześć Witalij, chciałbym porozmawiać o..."
                   rows={5}
                   required
                 />
@@ -146,13 +177,15 @@ export default function ContactPage() {
 
               <div className="grid gap-2">
                 <Label htmlFor="file">Załącznik (opcjonalny)</Label>
+
                 <div className="flex items-center gap-3">
                   <label
                     htmlFor="file"
-                    className="cursor-pointer flex items-center gap-2 px-4 py-2 bg-secondary hover:bg-secondary/80 rounded-md border border-border transition-colors"
+                    className="cursor-pointer flex items-center gap-2 px-4 py-2 bg-secondary hover:bg-secondary/80 rounded-md border border-border"
                   >
                     <Paperclip className="h-4 w-4" />
                     <span>Wybierz plik</span>
+
                     <Input
                       id="file"
                       type="file"
@@ -164,7 +197,10 @@ export default function ContactPage() {
 
                   {file && (
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <span className="truncate max-w-[180px]">{file.name}</span>
+                      <span className="truncate max-w-[180px]">
+                        {file.name}
+                      </span>
+
                       <Button
                         type="button"
                         variant="ghost"
@@ -177,22 +213,24 @@ export default function ContactPage() {
                     </div>
                   )}
                 </div>
+
                 <p className="text-xs text-muted-foreground">
-                  Maks. 5 MB • PDF, Word, TXT, obrazki, ZIP
+                  Maks. 5 MB
                 </p>
               </div>
 
-              <Button type="submit" size="lg" className="w-full" disabled={isSubmitting}>
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={isSubmitting}
+              >
                 {isSubmitting ? "Wysyłanie..." : "Wyślij wiadomość"}
               </Button>
             </form>
           </CardContent>
         </Card>
 
-        {/* Dane kontaktowe – bez zmian */}
-        <div className="space-y-8">
-          {/* Twój kod z danymi kontaktowymi */}
-        </div>
+        <div>{/* Dane kontaktowe */}</div>
       </div>
     </div>
   )
