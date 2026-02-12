@@ -37,13 +37,12 @@ def handler(event, context):
         body = event.get("body") or ""
         is_base64 = event.get("isBase64Encoded", False)
 
-        # ✅ Standard Lambda Proxy handling
+        # ✅ Lambda Proxy body handling
         if is_base64:
             print("DEBUG: Decoding base64 body")
             body_bytes = base64.b64decode(body)
         else:
-            print("⚠ WARNING: Body not base64 encoded (binary_media_types issue?)")
-            print("DEBUG: Encoding body as latin-1 fallback")
+            print("⚠ WARNING: Body not base64 encoded")
             body_bytes = body.encode("latin-1", errors="ignore")
 
         print(f"DEBUG: Body size: {len(body_bytes)} bytes")
@@ -60,7 +59,13 @@ def handler(event, context):
         if "multipart/form-data" in content_type.lower():
             print("DEBUG: Multipart detected")
 
-            parsed = BytesParser(policy=default).parsebytes(body_bytes)
+            # ✅ FIX: wrap RAW body into pseudo MIME message
+            pseudo_message = (
+                f"Content-Type: {content_type}\r\n"
+                f"MIME-Version: 1.0\r\n\r\n"
+            ).encode("utf-8") + body_bytes
+
+            parsed = BytesParser(policy=default).parsebytes(pseudo_message)
 
             for part in parsed.walk():
                 if part.get_content_maintype() == "multipart":
@@ -90,12 +95,10 @@ def handler(event, context):
                     if filename and content:
                         size = len(content)
 
-                        print(
-                            f"DEBUG: Attachment → {filename}, size={size} bytes"
-                        )
+                        print(f"DEBUG: Attachment → {filename}, size={size} bytes")
 
                         if size == 0:
-                            print("⚠ Attachment detected but empty")
+                            print("⚠ Attachment empty")
                             continue
 
                         if size > MAX_ATTACHMENT_SIZE:
@@ -141,10 +144,10 @@ def handler(event, context):
         if attachment:
             print("DEBUG: Attaching file")
 
-            content_type = attachment.get("content_type", "application/octet-stream")
+            content_type_att = attachment.get("content_type", "application/octet-stream")
             subtype = (
-                content_type.split("/")[-1]
-                if "/" in content_type
+                content_type_att.split("/")[-1]
+                if "/" in content_type_att
                 else "octet-stream"
             )
 
