@@ -4,13 +4,16 @@
 resource "aws_api_gateway_rest_api" "contact_api" {
   name        = "contact-form-api"
   description = "API do formularza kontaktowego z załącznikiem"
-  binary_media_types = ["multipart/form-data"]
+
+  binary_media_types = [
+    "multipart/form-data",
+    "application/octet-stream"
+  ]
 
   endpoint_configuration {
     types = ["REGIONAL"]
   }
 }
-
 resource "aws_lambda_permission" "allow_apigw" {
   statement_id  = "AllowExecutionFromAPIGateway"
   action        = "lambda:InvokeFunction"
