@@ -25,6 +25,7 @@ def cors_headers():
 
 
 def handler(event, context):
+    print("🔥 LAMBDA INVOKED 🔥")
     print("DEBUG: Handler started")
     print("DEBUG: isBase64Encoded:", event.get("isBase64Encoded"))
 
