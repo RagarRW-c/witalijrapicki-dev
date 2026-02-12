@@ -5,8 +5,7 @@ resource "aws_api_gateway_rest_api" "contact_api" {
   name        = "contact-form-api"
   description = "API do formularza kontaktowego z załącznikiem"
 
-  binary_media_types = [
-    "multipart/form-data", "*/*"  ]
+  binary_media_types = ["*/*"]
 
   endpoint_configuration {
     types = ["REGIONAL"]
@@ -163,6 +162,7 @@ resource "aws_api_gateway_deployment" "contact_deployment" {
       aws_api_gateway_integration_response.post_integration_response.id,
       aws_api_gateway_method_response.options_200.id,
       aws_api_gateway_integration_response.options_integration_response.id,
+      aws_api_gateway_rest_api.contact_api.binary_media_types,
     ]))
   }
 
