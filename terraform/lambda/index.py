@@ -16,7 +16,9 @@ FROM_EMAIL = os.environ['FROM_EMAIL']
 def cors_headers():
     return {
         "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*"
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type",
     }
 
 
@@ -38,87 +40,125 @@ def handler(event, context):
         body = event.get('body') or ""
         is_base64 = event.get('isBase64Encoded', False)
 
-        # Bezpieczne dekodowanie body
+        # Decydujemy jak traktować body
         if is_base64 and body:
+            print("DEBUG: Dekodowanie base64")
             try:
                 body_bytes = base64.b64decode(body)
+                print(f"DEBUG: body_bytes po dekodowaniu base64: {len(body_bytes)} bajtów")
             except Exception as e:
-                print("DEBUG: base64 decode error:", str(e))
+                print(f"DEBUG: Błąd dekodowania base64: {str(e)}")
                 body_bytes = b""
         else:
-            body_bytes = body.encode('utf-8', errors='ignore')
+            # API Gateway proxy integration → body jest już stringiem (nie base64)
+            # Nie robimy .encode() – zostawiamy jako string i dopiero parserowi dajemy bajty
+            print("DEBUG: Body przyszło jako string (bez base64)")
+            print(f"DEBUG: Długość body jako string: {len(body)} znaków")
+            # Konwertujemy dopiero tutaj na bajty – ale ostrożnie
+            body_bytes = body.encode('latin-1')   # latin-1 zachowuje wszystkie bajty 0-255
 
-        # Multipart
+        # Logujemy fragment body do diagnozy (bezpiecznie)
+        body_preview = body[:400] if isinstance(body, str) else body_bytes[:400].decode('latin-1', errors='replace')
+        print(f"DEBUG: Content-Type: {content_type}")
+        print(f"DEBUG: Body preview (pierwsze 400 znaków/bajtów):\n{body_preview}\n")
+
+        # Parsowanie multipart
         if 'multipart/form-data' in content_type.lower():
-            print("DEBUG: Multipart detected")
+            print("DEBUG: Multipart detected – używamy BytesParser")
 
             from email.parser import BytesParser
             from email.policy import default
 
-            msg = BytesParser(policy=default).parsebytes(body_bytes)
+            try:
+                msg = BytesParser(policy=default).parsebytes(body_bytes)
+                print(f"DEBUG: Parser przeszedł pomyślnie. is_multipart: {msg.is_multipart()}")
 
-            for part in msg.walk():
-                if part.get_content_maintype() == 'multipart':
-                    continue
-                if part.get('Content-Disposition') is None:
-                    continue
+                for part in msg.walk():
+                    if part.get_content_maintype() == 'multipart':
+                        continue
 
-                field_name = part.get_param('name', header='content-disposition')
+                    disposition = part.get('Content-Disposition')
+                    if disposition is None:
+                        continue
 
-                if field_name == 'name':
-                    name = part.get_payload(decode=True).decode('utf-8', errors='ignore')
+                    field_name = part.get_param('name', header='content-disposition')
 
-                elif field_name == 'email':
-                    email = part.get_payload(decode=True).decode('utf-8', errors='ignore')
+                    if field_name in ('name', 'email', 'subject', 'message'):
+                        value = part.get_payload(decode=True).decode('utf-8', errors='ignore')
+                        if field_name == 'name':
+                            name = value
+                        elif field_name == 'email':
+                            email = value
+                        elif field_name == 'subject':
+                            subject = value
+                        elif field_name == 'message':
+                            message = value
+                        print(f"DEBUG: Pole {field_name}: {value[:60]}...")
 
-                elif field_name == 'subject':
-                    subject = part.get_payload(decode=True).decode('utf-8', errors='ignore')
+                    elif field_name == 'attachment':
+                        filename = part.get_filename()
+                        if filename:
+                            content = part.get_payload(decode=True)
+                            content_type_part = part.get_content_type() or 'application/octet-stream'
+                            size = len(content) if content else 0
+                            print(f"DEBUG: === ZAŁĄCZNIK WYKRYTY ===")
+                            print(f"DEBUG:   Filename: {filename}")
+                            print(f"DEBUG:   Content-Type: {content_type_part}")
+                            print(f"DEBUG:   Rozmiar: {size} bajtów")
+                            if size > 0:
+                                attachment = {
+                                    'filename': filename,
+                                    'content_type': content_type_part,
+                                    'content': content
+                                }
+                            else:
+                                print("DEBUG: Załącznik znaleziony, ale zawartość jest pusta!")
 
-                elif field_name == 'message':
-                    message = part.get_payload(decode=True).decode('utf-8', errors='ignore')
+                if not attachment:
+                    print("DEBUG: Nie znaleziono załącznika (lub był pusty)")
 
-                elif field_name == 'attachment':
-                    filename = part.get_filename()
-                    if filename:
-                        attachment = {
-                            'filename': filename,
-                            'content_type': part.get_content_type(),
-                            'content': part.get_payload(decode=True)
-                        }
-                        print("DEBUG: Attachment:", filename, "size:", len(attachment['content']))
+            except Exception as parse_err:
+                print(f"DEBUG: Błąd parsowania multipart: {str(parse_err)}")
 
-        # JSON fallback
+        # JSON fallback (dla testów bez pliku)
         else:
-            print("DEBUG: JSON detected")
-
+            print("DEBUG: JSON fallback")
             if body:
-                data = json.loads(body)
-                name = data.get('name', name)
-                email = data.get('email', email)
-                subject = data.get('subject', subject)
-                message = data.get('message', message)
+                try:
+                    data = json.loads(body)
+                    name = data.get('name', name)
+                    email = data.get('email', email)
+                    subject = data.get('subject', subject)
+                    message = data.get('message', message)
+                except Exception as json_err:
+                    print(f"DEBUG: Błąd parsowania JSON: {str(json_err)}")
 
-        # Email MIME
+        # Budowanie maila
         mime_msg = MIMEMultipart()
         mime_msg['Subject'] = subject
         mime_msg['From'] = FROM_EMAIL
         mime_msg['To'] = TO_EMAIL
         mime_msg['Reply-To'] = email
 
-        mime_msg.attach(MIMEText(f"""
+        body_text = f"""
 Od: {name} <{email}>
 
 Wiadomość:
 {message}
-        """, 'plain', 'utf-8'))
+        """.strip()
 
-        if attachment:
+        mime_msg.attach(MIMEText(body_text, 'plain', 'utf-8'))
+
+        if attachment and attachment['content']:
+            print(f"DEBUG: Dołączanie załącznika: {attachment['filename']} ({len(attachment['content'])} bajtów)")
             part = MIMEApplication(
                 attachment['content'],
                 _subtype=attachment['content_type'].split('/')[-1] or 'octet-stream'
             )
             part.add_header('Content-Disposition', 'attachment', filename=attachment['filename'])
             mime_msg.attach(part)
+        else:
+            print("DEBUG: Brak załącznika do dołączenia")
 
         raw_message = mime_msg.as_bytes()
 
@@ -138,7 +178,6 @@ Wiadomość:
 
     except ClientError as e:
         print("DEBUG: SES ClientError:", str(e))
-
         return {
             'statusCode': 500,
             'headers': cors_headers(),
@@ -147,7 +186,6 @@ Wiadomość:
 
     except Exception as e:
         print("DEBUG: General error:", str(e))
-
         return {
             'statusCode': 500,
             'headers': cors_headers(),
