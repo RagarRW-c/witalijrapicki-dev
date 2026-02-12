@@ -12,13 +12,21 @@ ses_client = boto3.client('ses', region_name='eu-central-1')
 TO_EMAIL = os.environ['TO_EMAIL']
 FROM_EMAIL = os.environ['FROM_EMAIL']
 
+
+def cors_headers():
+    return {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*"
+    }
+
+
 def handler(event, context):
     print("DEBUG: Handler started")
     print("DEBUG: Event keys:", list(event.keys()))
     print("DEBUG: isBase64Encoded:", event.get('isBase64Encoded'))
 
     try:
-        headers = event.get('headers', {})
+        headers = event.get('headers', {}) or {}
         content_type = headers.get('content-type', '') or headers.get('Content-Type', '')
 
         name = 'Anonim'
@@ -27,20 +35,26 @@ def handler(event, context):
         message = 'Brak treści'
         attachment = None
 
-        # Odczytujemy body
-        body = event.get('body')
+        body = event.get('body') or ""
         is_base64 = event.get('isBase64Encoded', False)
 
-        if is_base64:
-            body_bytes = base64.b64decode(body)
+        # Bezpieczne dekodowanie body
+        if is_base64 and body:
+            try:
+                body_bytes = base64.b64decode(body)
+            except Exception as e:
+                print("DEBUG: base64 decode error:", str(e))
+                body_bytes = b""
         else:
-            body_bytes = body if isinstance(body, bytes) else body.encode('utf-8', errors='ignore')
+            body_bytes = body.encode('utf-8', errors='ignore')
 
-        # Parsowanie multipart/form-data
+        # Multipart
         if 'multipart/form-data' in content_type.lower():
             print("DEBUG: Multipart detected")
+
             from email.parser import BytesParser
             from email.policy import default
+
             msg = BytesParser(policy=default).parsebytes(body_bytes)
 
             for part in msg.walk():
@@ -50,14 +64,19 @@ def handler(event, context):
                     continue
 
                 field_name = part.get_param('name', header='content-disposition')
+
                 if field_name == 'name':
                     name = part.get_payload(decode=True).decode('utf-8', errors='ignore')
+
                 elif field_name == 'email':
                     email = part.get_payload(decode=True).decode('utf-8', errors='ignore')
+
                 elif field_name == 'subject':
                     subject = part.get_payload(decode=True).decode('utf-8', errors='ignore')
+
                 elif field_name == 'message':
                     message = part.get_payload(decode=True).decode('utf-8', errors='ignore')
+
                 elif field_name == 'attachment':
                     filename = part.get_filename()
                     if filename:
@@ -66,40 +85,42 @@ def handler(event, context):
                             'content_type': part.get_content_type(),
                             'content': part.get_payload(decode=True)
                         }
-                        print("DEBUG: Załącznik znaleziony:", filename, "rozmiar:", len(attachment['content']))
+                        print("DEBUG: Attachment:", filename, "size:", len(attachment['content']))
 
+        # JSON fallback
         else:
             print("DEBUG: JSON detected")
-            body_str = body.decode('utf-8') if isinstance(body, bytes) else body
-            data = json.loads(body_str)
-            name = data.get('name', 'Anonim')
-            email = data.get('email', 'brak emaila')
-            subject = data.get('subject', 'Wiadomość z formularza')
-            message = data.get('message', 'Brak treści')
 
-        # Budujemy MIME wiadomość
-        msg = MIMEMultipart()
-        msg['Subject'] = subject
-        msg['From'] = FROM_EMAIL
-        msg['To'] = TO_EMAIL
-        msg['Reply-To'] = email
+            if body:
+                data = json.loads(body)
+                name = data.get('name', name)
+                email = data.get('email', email)
+                subject = data.get('subject', subject)
+                message = data.get('message', message)
 
-        # Tekstowa część
-        msg.attach(MIMEText(f"""
+        # Email MIME
+        mime_msg = MIMEMultipart()
+        mime_msg['Subject'] = subject
+        mime_msg['From'] = FROM_EMAIL
+        mime_msg['To'] = TO_EMAIL
+        mime_msg['Reply-To'] = email
+
+        mime_msg.attach(MIMEText(f"""
 Od: {name} <{email}>
-Temat: {subject}
 
 Wiadomość:
 {message}
         """, 'plain', 'utf-8'))
 
-        # Załącznik
         if attachment:
-            part = MIMEApplication(attachment['content'], _subtype=attachment['content_type'].split('/')[-1] or 'octet-stream')
+            part = MIMEApplication(
+                attachment['content'],
+                _subtype=attachment['content_type'].split('/')[-1] or 'octet-stream'
+            )
             part.add_header('Content-Disposition', 'attachment', filename=attachment['filename'])
-            msg.attach(part)
+            mime_msg.attach(part)
 
-        raw_message = msg.as_bytes()
+        raw_message = mime_msg.as_bytes()
 
         response = ses_client.send_raw_email(
             Source=FROM_EMAIL,
@@ -107,23 +128,28 @@ Wiadomość:
             RawMessage={'Data': raw_message}
         )
 
-        print("DEBUG: Email sent, MessageId:", response['MessageId'])
+        print("DEBUG: Email sent:", response['MessageId'])
 
         return {
             'statusCode': 200,
-            'headers': {'Content-Type': 'application/json'},
+            'headers': cors_headers(),
             'body': json.dumps({'message': 'Wiadomość wysłana!'})
         }
 
     except ClientError as e:
         print("DEBUG: SES ClientError:", str(e))
+
         return {
             'statusCode': 500,
+            'headers': cors_headers(),
             'body': json.dumps({'error': str(e)})
         }
+
     except Exception as e:
         print("DEBUG: General error:", str(e))
+
         return {
             'statusCode': 500,
+            'headers': cors_headers(),
             'body': json.dumps({'error': 'Błąd serwera'})
         }
