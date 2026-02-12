@@ -4,29 +4,40 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Label } from "@/components/ui/label"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Paperclip, X, Loader2 } from "lucide-react"
 import { toast } from "sonner"
+import { useForm } from "react-hook-form"
+import { z } from "zod"
+import { zodResolver } from "@hookform/resolvers/zod"
 
 const API_ENDPOINT = "https://d5zxry52fj.execute-api.eu-central-1.amazonaws.com/prod/contact"
 
-export default function ContactPage() {
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    subject: "",
-    message: "",
-  })
+const formSchema = z.object({
+  name: z.string().min(2, { message: "Imię musi mieć co najmniej 2 znaki" }).trim(),
+  email: z.string().email({ message: "Nieprawidłowy adres email" }).trim(),
+  subject: z.string().min(3, { message: "Temat musi mieć co najmniej 3 znaki" }).trim(),
+  message: z.string().min(10, { message: "Wiadomość musi mieć co najmniej 10 znaków" }).trim(),
+})
 
+type FormData = z.infer<typeof formSchema>
+
+export default function ContactPage() {
   const [file, setFile] = useState<File | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
-    const { name, value } = e.target
-    setFormData((prev) => ({ ...prev, [name]: value }))
-  }
+  const form = useForm<FormData>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      name: "",
+      email: "",
+      subject: "",
+      message: "",
+    },
+  })
+
+  const { register, handleSubmit, formState: { errors }, reset } = form
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0]
@@ -34,7 +45,7 @@ export default function ContactPage() {
 
     if (selectedFile.size > 5 * 1024 * 1024) {
       toast.error("Plik jest za duży (maks. 5 MB)")
-      e.target.value = "" // wyczyść input
+      e.target.value = ""
       return
     }
 
@@ -45,54 +56,33 @@ export default function ContactPage() {
     setFile(null)
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-
-    // Podstawowa walidacja po stronie klienta
-    if (!formData.name.trim()) {
-      toast.error("Imię jest wymagane")
-      return
-    }
-    if (!formData.email.includes("@") || !formData.email.includes(".")) {
-      toast.error("Podaj poprawny adres email")
-      return
-    }
-    if (!formData.subject.trim()) {
-      toast.error("Temat jest wymagany")
-      return
-    }
-    if (!formData.message.trim()) {
-      toast.error("Wiadomość jest wymagana")
-      return
-    }
-
+  const onSubmit = async (data: FormData) => {
     setIsSubmitting(true)
 
     try {
-      const data = new FormData()
-      data.append("name", formData.name.trim())
-      data.append("email", formData.email.trim())
-      data.append("subject", formData.subject.trim())
-      data.append("message", formData.message.trim())
+      const fd = new FormData()
+      fd.append("name", data.name)
+      fd.append("email", data.email)
+      fd.append("subject", data.subject)
+      fd.append("message", data.message)
       if (file) {
-        data.append("attachment", file)
+        fd.append("attachment", file)
       }
 
       const response = await fetch(API_ENDPOINT, {
         method: "POST",
-        body: data,
+        body: fd,
       })
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
-        throw new Error(errorData.error || `Błąd serwera (${response.status})`)
+        throw new Error(errorData.error || `Błąd HTTP: ${response.status}`)
       }
 
       const result = await response.json()
-      toast.success(result.message || "Wiadomość została wysłana!")
+      toast.success(result.message || "Wiadomość wysłana!")
 
-      // Reset formularza
-      setFormData({ name: "", email: "", subject: "", message: "" })
+      reset()
       setFile(null)
 
     } catch (err: any) {
@@ -110,7 +100,7 @@ export default function ContactPage() {
           <CardTitle className="text-3xl">Skontaktuj się ze mną</CardTitle>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <label htmlFor="name" className="text-sm font-medium">
@@ -118,12 +108,12 @@ export default function ContactPage() {
                 </label>
                 <Input
                   id="name"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleChange}
                   placeholder="Twoje imię"
-                  required
+                  {...register("name")}
                 />
+                {errors.name && (
+                  <p className="text-sm text-destructive">{errors.name.message}</p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -132,13 +122,13 @@ export default function ContactPage() {
                 </label>
                 <Input
                   id="email"
-                  name="email"
                   type="email"
-                  value={formData.email}
-                  onChange={handleChange}
                   placeholder="twoj@email.com"
-                  required
+                  {...register("email")}
                 />
+                {errors.email && (
+                  <p className="text-sm text-destructive">{errors.email.message}</p>
+                )}
               </div>
             </div>
 
@@ -148,12 +138,12 @@ export default function ContactPage() {
               </label>
               <Input
                 id="subject"
-                name="subject"
-                value={formData.subject}
-                onChange={handleChange}
                 placeholder="W czym mogę pomóc?"
-                required
+                {...register("subject")}
               />
+              {errors.subject && (
+                <p className="text-sm text-destructive">{errors.subject.message}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -162,13 +152,13 @@ export default function ContactPage() {
               </label>
               <Textarea
                 id="message"
-                name="message"
-                value={formData.message}
-                onChange={handleChange}
                 placeholder="Opisz swoją sprawę..."
                 rows={6}
-                required
+                {...register("message")}
               />
+              {errors.message && (
+                <p className="text-sm text-destructive">{errors.message.message}</p>
+              )}
             </div>
 
             <div className="space-y-2">
