@@ -5,12 +5,13 @@ resource "aws_api_gateway_rest_api" "contact_api" {
   name        = "contact-form-api"
   description = "API do formularza kontaktowego z załącznikiem"
 
-  binary_media_types = ["*/*"]
+  binary_media_types = ["*/*", "multipart/form-data"]  # Explicit binary + multipart
 
   endpoint_configuration {
     types = ["REGIONAL"]
   }
 }
+
 resource "aws_lambda_permission" "allow_apigw" {
   statement_id  = "AllowExecutionFromAPIGateway"
   action        = "lambda:InvokeFunction"
@@ -19,7 +20,6 @@ resource "aws_lambda_permission" "allow_apigw" {
 
   source_arn = "${aws_api_gateway_rest_api.contact_api.execution_arn}/*/*"
 }
-
 
 ########################################
 # Resource: /contact
@@ -34,10 +34,15 @@ resource "aws_api_gateway_resource" "contact" {
 # POST /contact
 ########################################
 resource "aws_api_gateway_method" "contact_post" {
-  rest_api_id   = aws_api_gateway_rest_api.contact_api.id
-  resource_id   = aws_api_gateway_resource.contact.id
-  http_method   = "POST"
-  authorization = "NONE"
+  rest_api_id      = aws_api_gateway_rest_api.contact_api.id
+  resource_id      = aws_api_gateway_resource.contact.id
+  http_method      = "POST"
+  authorization    = "NONE"
+  api_key_required = false  # Explicit – no API key
+
+  request_parameters = {
+    "method.request.header.Content-Type" = true
+  }
 }
 
 resource "aws_api_gateway_integration" "contact_lambda" {
@@ -47,10 +52,15 @@ resource "aws_api_gateway_integration" "contact_lambda" {
   integration_http_method = "POST"
   type                    = "AWS_PROXY"
   uri                     = aws_lambda_function.contact_form.invoke_arn
-  content_handling = "CONVERT_TO_BINARY"
+
+  request_templates = {
+    "application/json" = jsonencode({})  # Passthrough for FormData
+  }
+
+  content_handling = "CONVERT_TO_BINARY"  # For attachments
 }
 
-# CORS dla POST – nagłówki odpowiedzi (to jest brakujący element!)
+# POST 200 response (CORS headers)
 resource "aws_api_gateway_method_response" "post_200" {
   rest_api_id = aws_api_gateway_rest_api.contact_api.id
   resource_id = aws_api_gateway_resource.contact.id
@@ -80,12 +90,7 @@ resource "aws_api_gateway_integration_response" "post_integration_response" {
     "method.response.header.Access-Control-Allow-Origin"  = "'*'"
   }
 
-  response_templates = {
-    "application/json" = ""
-  }
-
   depends_on = [
-    aws_api_gateway_integration.contact_lambda,
     aws_api_gateway_method_response.post_200
   ]
 }
@@ -94,20 +99,30 @@ resource "aws_api_gateway_integration_response" "post_integration_response" {
 # OPTIONS /contact – preflight CORS
 ########################################
 resource "aws_api_gateway_method" "contact_options" {
-  rest_api_id   = aws_api_gateway_rest_api.contact_api.id
-  resource_id   = aws_api_gateway_resource.contact.id
-  http_method   = "OPTIONS"
-  authorization = "NONE"
+  rest_api_id      = aws_api_gateway_rest_api.contact_api.id
+  resource_id      = aws_api_gateway_resource.contact.id
+  http_method      = "OPTIONS"
+  authorization    = "NONE"
+  api_key_required = false  # Explicit
+
+  request_parameters = {
+    "method.request.header.Access-Control-Request-Headers" = true
+    "method.request.header.Access-Control-Request-Method"  = true
+    "method.request.header.Origin"                         = true
+  }
 }
 
 resource "aws_api_gateway_integration" "contact_options_integration" {
   rest_api_id = aws_api_gateway_rest_api.contact_api.id
   resource_id = aws_api_gateway_resource.contact.id
   http_method = aws_api_gateway_method.contact_options.http_method
-  type        = "MOCK"
+
+  type = "MOCK"
 
   request_templates = {
-    "application/json" = "{\"statusCode\": 200}"
+    "application/json" = jsonencode({
+      statusCode = 200
+    })
   }
 }
 
@@ -140,20 +155,19 @@ resource "aws_api_gateway_integration_response" "options_integration_response" {
     "method.response.header.Access-Control-Allow-Origin"  = "'*'"
   }
 
-  response_templates = {
-    "application/json" = ""
-  }
+  depends_on = [
+    aws_api_gateway_method_response.options_200
+  ]
 }
 
 ########################################
-# Deployment + Stage
+# Deployment + Stage (z triggers dla auto-redeploy)
 ########################################
 resource "aws_api_gateway_deployment" "contact_deployment" {
   rest_api_id = aws_api_gateway_rest_api.contact_api.id
 
   triggers = {
     redeployment = sha1(jsonencode([
-      aws_api_gateway_resource.contact.id,
       aws_api_gateway_method.contact_post.id,
       aws_api_gateway_integration.contact_lambda.id,
       aws_api_gateway_method.contact_options.id,
@@ -162,6 +176,7 @@ resource "aws_api_gateway_deployment" "contact_deployment" {
       aws_api_gateway_integration_response.post_integration_response.id,
       aws_api_gateway_method_response.options_200.id,
       aws_api_gateway_integration_response.options_integration_response.id,
+      aws_api_gateway_resource.contact.id,
       aws_api_gateway_rest_api.contact_api.binary_media_types,
     ]))
   }
@@ -176,6 +191,8 @@ resource "aws_api_gateway_stage" "prod" {
   deployment_id = aws_api_gateway_deployment.contact_deployment.id
   stage_name    = "prod"
 
+  xray_tracing_enabled = true  # Opcjonalnie – dla logów w CloudWatch
+
   depends_on = [aws_api_gateway_deployment.contact_deployment]
 }
 
@@ -183,6 +200,6 @@ resource "aws_api_gateway_stage" "prod" {
 # Output
 ########################################
 output "api_gateway_endpoint" {
-  description = "Pełny URL endpointu formularza (POST /contact)"
+  description = "Full URL for contact form endpoint (POST /contact)"
   value       = "${aws_api_gateway_stage.prod.invoke_url}/contact"
 }
