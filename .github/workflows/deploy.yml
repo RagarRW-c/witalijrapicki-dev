@@ -2,14 +2,14 @@ name: Deploy to S3 & CloudFront
 
 on:
   push:
-    branches: [ "feature/contact-form-integration" ]  # Deploy na push do feature (zmień na 'main' po merge)
+    branches: [ "feature/contact-form-integration" ]
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     permissions:
-      id-token: write  # Wymagane dla OIDC
+      id-token: write
       contents: read
 
     steps:
@@ -19,25 +19,22 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'  # Twoja wersja Node z package.json
+          node-version: '20'
 
       - name: Install dependencies
-        run: npm ci  # Szybsze niż npm install
+        run: npm ci
 
-      - name: Build Next.js
-        run: npm run build
-
-      - name: Export static files
-        run: npm run export  # Generuje /out – dodaj do package.json jeśli brak: "export": "next export"
+      - name: Build Next.js (with static export)
+        run: npm run build  # Automatycznie generuje /out dzięki output: 'export'
 
       - name: Configure AWS Credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ vars.AWS_ROLE_ARN }}  # ARN role z tf output
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           aws-region: eu-central-1
 
       - name: Sync to S3
-        run: aws s3 sync ./out s3://${{ vars.S3_BUCKET_NAME }} --delete  # Sync z delete starych plików
+        run: aws s3 sync ./out s3://${{ vars.S3_BUCKET_NAME }} --delete
 
       - name: Invalidate CloudFront cache
-        run: aws cloudfront create-invalidation --distribution-id ${{ vars.CLOUDFRONT_ID }} --paths "/*"  # Odświeża cache
+        run: aws cloudfront create-invalidation --distribution-id ${{ vars.CLOUDFRONT_ID }} --paths "/*"

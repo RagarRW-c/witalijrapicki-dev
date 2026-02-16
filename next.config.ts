@@ -1,9 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  output: 'export',  // Dodaj tę linię – włącza static export
+  output: 'export',  // Włącza static export – next build generuje /out
   reactCompiler: true,
-  // Inne opcje, jeśli masz
+  // Inne opcje...
 };
 
 export default nextConfig;
