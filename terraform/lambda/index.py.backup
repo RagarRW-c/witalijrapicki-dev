@@ -111,26 +111,18 @@ def handler(event, context):
                         }
 
         # =========================
-        # ✅ JSON FALLBACK – FIXED
+        # ✅ JSON FALLBACK
         # =========================
         else:
             print("DEBUG: JSON detected")
-            print(f"DEBUG: Raw body preview: {body[:200] if body else 'EMPTY'}")  # Debug
 
             if body:
-                try:
-                    data = json.loads(body)
-                    name = data.get("name", name)
-                    email = data.get("email", email)
-                    subject = data.get("subject", subject)
-                    message = data.get("message", message)
-                    print("DEBUG: JSON parsed OK")
-                except json.JSONDecodeError as e:
-                    print(f"DEBUG: JSON parse error: {str(e)}")
-                    # Fallback – użyj raw body jako message
-                    message = f"Raw body (JSON fail): {body[:500]}"
-            else:
-                print("DEBUG: Empty body – using defaults")
+                data = json.loads(body)
+
+                name = data.get("name", name)
+                email = data.get("email", email)
+                subject = data.get("subject", subject)
+                message = data.get("message", message)
 
         # =========================
         # ✅ BUILD MIME EMAIL
@@ -143,7 +135,7 @@ def handler(event, context):
 
         mime_msg.attach(
             MIMEText(
-                f"From: {name} <{email}>\n\nMessage:\n{message}",
+                f"Od: {name} <{email}>\n\nWiadomość:\n{message}",
                 "plain",
                 "utf-8",
             )
@@ -188,7 +180,7 @@ def handler(event, context):
         return {
             "statusCode": 200,
             "headers": cors_headers(),
-            "body": json.dumps({"message": "Message sent!"}),
+            "body": json.dumps({"message": "Wiadomość wysłana!"}),
         }
 
     except ClientError as e:
@@ -206,5 +198,5 @@ def handler(event, context):
         return {
             "statusCode": 500,
             "headers": cors_headers(),
-            "body": json.dumps({"error": "Server error"}),
+            "body": json.dumps({"error": str(e)}),
         }
