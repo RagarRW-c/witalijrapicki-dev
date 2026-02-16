@@ -2,7 +2,7 @@ name: Deploy to S3 & CloudFront
 
 on:
   push:
-    branches: [ feature ]  # Deploy na push do feature (zmień na 'main' po merge)
+    branches: [ "feature/contact-form-integration" ]  # Deploy na push do feature (zmień na 'main' po merge)
 
 jobs:
   deploy:
