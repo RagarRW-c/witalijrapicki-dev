@@ -94,24 +94,21 @@ resource "aws_cloudfront_origin_access_identity" "oai" {
 
 # S3 policy dla OAI (tylko CloudFront może czytać)
 resource "aws_s3_bucket_policy" "oai_policy" {
+  depends_on = [aws_s3_bucket.website_bucket, aws_cloudfront_origin_access_identity.oai]
+
   bucket = aws_s3_bucket.website_bucket.id
 
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
       {
-        Sid    = "AllowCloudFrontServicePrincipal"
+        Sid    = "AllowCloudFrontOAIRead"
         Effect = "Allow"
         Principal = {
-          Service = "cloudfront.amazonaws.com"
+          AWS = aws_cloudfront_origin_access_identity.oai.iam_arn   # <-- To jest kluczowe
         }
         Action   = "s3:GetObject"
         Resource = "${aws_s3_bucket.website_bucket.arn}/*"
-        Condition = {
-          StringEquals = {
-            "AWS:SourceArn" = aws_cloudfront_distribution.cdn.arn
-          }
-        }
       }
     ]
   })
