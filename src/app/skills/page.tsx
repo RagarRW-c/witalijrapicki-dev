@@ -37,19 +37,19 @@ const skills = [
       { name: "AWS (EC2, VPC, Route53, IAM, S3, CloudFront, Lambda, RDS, DynamoDB, ECS)", icon: Cloud },
       { name: "Terraform (Infrastructure as Code)", icon: Cog },
       { name: "GitHub Actions / GitLab CI/CD", icon: GitBranch },
-      { name: "Docker (podstawy + zarządzanie kontenerami)", icon: Container },
-      { name: "Kubernetes (w trakcie nauki i certyfikacji)", icon: Layers },
-      { name: "Jenkins (podstawowa konfiguracja pipeline’ów)", icon: Cog },
+      { name: "Docker (basics + container management)", icon: Container },
+      { name: "Kubernetes (in progress and certification)", icon: Layers },
+      { name: "Jenkins (basic pipeline configuration)", icon: Cog },
       { name: "Ansible – basics", icon: Terminal },
       { name: "Azure – basics", icon: Globe },
     ],
   },
   {
-    category: "Systemy i sieci",
+    category: "Systems and Networks",
     icon: Server,
     items: [
       { name: "Linux / Windows Server", icon: Server },
-      { name: "Sieci (LAN/WAN/WLAN, routing, switching, firewall)", icon: Network },
+      { name: "Networks (LAN/WAN/WLAN, routing, switching, firewall)", icon: Network },
       { name: "Cisco, Unifi, MikroTik", icon: HardDrive },
       { name: "VPN, SSH, RDP", icon: Lock },
       { name: "DHCP, DNS, NTP", icon: Globe },
@@ -57,16 +57,16 @@ const skills = [
     ],
   },
   {
-    category: "Programowanie / skrypty",
+    category: "Programming / Scripting",
     icon: Code,
     items: [
-      { name: "Bash (podstawowa automatyzacja)", icon: Terminal },
+      { name: "Bash (basic automation)", icon: Terminal },
       { name: "Python", icon: FileCode },
       { name: "JSON / YAML", icon: Braces },
     ],
   },
   {
-    category: "Inne",
+    category: "Other",
     icon: Settings,
     items: [
       { name: "Active Directory", icon: Shield },
@@ -78,7 +78,7 @@ const skills = [
   },
 ]
 
-// Animacja badge'ów
+// Badge animation
 const badgeVariants = {
   hidden: { opacity: 0, scale: 0.85, y: 8 },
   visible: (i: number) => ({
@@ -86,7 +86,7 @@ const badgeVariants = {
     scale: 1,
     y: 0,
     transition: {
-      delay: i * 0.03 + 0.1, // lekkie opóźnienie między kategoriami
+      delay: i * 0.03 + 0.1, // slight delay between categories
       duration: 0.35,
       ease: "easeOut",
     },
@@ -97,7 +97,7 @@ export default function SkillsPage() {
   return (
     <div className="container py-12 md:py-20">
       <h1 className="text-4xl md:text-5xl font-bold text-center mb-12 md:mb-16">
-        Umiejętności
+        Skills
       </h1>
 
       <Accordion type="multiple" defaultValue={skills.map((s) => s.category)} className="w-full max-w-4xl mx-auto">
@@ -117,7 +117,7 @@ export default function SkillsPage() {
                 {category.items.map((skill, index) => (
                   <motion.div
                     key={skill.name}
-                    custom={catIndex * 10 + index} // różne opóźnienie dla każdej kategorii
+                    custom={catIndex * 10 + index} // different delay for each category
                     initial="hidden"
                     whileInView="visible"
                     viewport={{ once: true, amount: 0.2 }}

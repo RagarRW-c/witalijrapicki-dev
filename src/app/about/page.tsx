@@ -8,51 +8,51 @@ export default function AboutPage() {
   return (
     <div className="container py-12 md:py-20">
       <h1 className="text-4xl md:text-5xl font-bold text-center mb-10 md:mb-16">
-        O mnie
+        About me
       </h1>
 
       <div className="grid md:grid-cols-2 gap-10 md:gap-16 items-center max-w-5xl mx-auto">
-        {/* Miejsce na zdjęcie / avatar */}
+        {/* Photo / avatar placeholder */}
         <div className="relative aspect-square md:aspect-[4/5] rounded-2xl overflow-hidden border-2 border-primary/30 shadow-xl shadow-primary/10">
           <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-background/60" />
-          {/* Placeholder – później podmienisz */}
+          {/* Placeholder – replace later */}
           <div className="flex items-center justify-center h-full text-muted-foreground text-lg font-medium bg-muted/40">
-            Tu będzie Twoje zdjęcie
+            Your photo will be here
           </div>
-          {/* Jak będziesz miał zdjęcie: */}
+          {/* When you have photo: */}
           {/* <Image src="/me.jpg" alt="Witalij Rapicki" fill className="object-cover" /> */}
         </div>
 
-        {/* Tekst */}
+        {/* Text */}
         <div className="space-y-6 md:space-y-8">
           <p className="text-lg md:text-xl leading-relaxed text-muted-foreground">
-            Cześć! Jestem Witalij – Cloud Engineer i DevOps z Krakowa.
+            Hi! I'm Witalij – Cloud Engineer and DevOps from Krakow.
           </p>
 
           <p className="text-lg md:text-xl leading-relaxed text-muted-foreground">
-            Aktualnie skupiam się na roli Cloud Engineer (2+ lata doświadczenia), a wcześniej przez 5 lat pracowałem jako System & Network Administrator – projektując i utrzymując sieci, serwery oraz wysokodostępne rozwiązania hybrydowe.
+            Currently focusing on Cloud Engineer role (2+ years experience), previously worked for 5 years as System & Network Administrator – designing and maintaining networks, servers, and high-availability hybrid solutions.
           </p>
 
           <p className="text-lg md:text-xl leading-relaxed text-muted-foreground">
-            Lubię, kiedy rzeczy działają przewidywalnie, szybko i bezpiecznie – dlatego większość mojego czasu spędzam na pisaniu kodu, który sam zarządza infrastrukturą, pipeline’ami i backupami.
+            I like when things work predictably, fast, and securely – that's why I spend most of my time writing code that manages infrastructure, pipelines, and backups itself.
           </p>
 
           <p className="text-lg md:text-xl leading-relaxed text-muted-foreground">
-            Na co dzień pracuję z Linuxem, kontenerami, sieciami i narzędziami CI/CD. Ciągle się uczę – w kolejce: certyfikat Terraform → AWS → Docker → Kubernetes.
+            Daily working with Linux, containers, networks, and CI/CD tools. Constantly learning – next: Terraform cert → AWS → Docker → Kubernetes.
           </p>
 
           <p className="text-lg md:text-xl leading-relaxed text-muted-foreground">
-            Poza pracą jeżdżę na rowerze, gram w gry, hoduję rośliny owocowe i czasem modyfikuję auta.  
-            Mówię płynnie po polsku, angielsku, ukraińsku i rosyjsku.
+            Outside work, I bike, play games, grow fruit plants, and sometimes modify cars.  
+            Fluent in Polish, English, Ukrainian, and Russian.
           </p>
 
-          {/* Wyróżnione karty – wszystkie w jednolitej strukturze */}
+          {/* Highlighted cards – all in uniform structure */}
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 pt-6">
             <Card className="bg-card/60 backdrop-blur-sm border-border/40">
               <CardContent className="p-3 text-center flex flex-col items-center gap-1">
                 <p className="text-2xl font-bold text-primary">2+</p>
                 <p className="text-xs text-muted-foreground leading-tight">
-                  lata w<br />chmurze
+                  years in<br />cloud
                 </p>
               </CardContent>
             </Card>
@@ -61,7 +61,7 @@ export default function AboutPage() {
               <CardContent className="p-3 text-center flex flex-col items-center gap-1">
                 <p className="text-2xl font-bold text-primary">5</p>
                 <p className="text-xs text-muted-foreground leading-tight">
-                  lat<br />Sys & Net Admin
+                  years<br />Sys & Net Admin
                 </p>
               </CardContent>
             </Card>
@@ -69,7 +69,7 @@ export default function AboutPage() {
             <Card className="bg-card/60 backdrop-blur-sm border-border/40">
               <CardContent className="p-3 text-center flex flex-col items-center gap-1">
                 <p className="text-2xl font-bold text-primary">AWS</p>
-                <p className="text-xs text-muted-foreground">codziennie</p>
+                <p className="text-xs text-muted-foreground">daily</p>
               </CardContent>
             </Card>
 
@@ -90,7 +90,7 @@ export default function AboutPage() {
                   height={36}
                 />
                 <p className="text-base font-semibold text-primary">Docker</p>
-                <p className="text-xs text-muted-foreground">podstawy</p>
+                <p className="text-xs text-muted-foreground">basics</p>
               </CardContent>
             </Card>
 
@@ -104,16 +104,16 @@ export default function AboutPage() {
                   height={36}
                 />
                 <p className="text-base font-semibold text-primary">Kubernetes</p>
-                <p className="text-xs text-muted-foreground">w trakcie nauki</p>
+                <p className="text-xs text-muted-foreground">in progress</p>
               </CardContent>
             </Card>
           </div>
 
-          {/* Przyciski */}
+          {/* Buttons */}
           <div className="flex flex-wrap gap-4 pt-8">
             <Button size="lg" asChild>
               <Link href="/contact">
-                Skontaktuj się <Mail className="ml-2 h-4 w-4" />
+                Contact me <Mail className="ml-2 h-4 w-4" />
               </Link>
             </Button>
 

@@ -5,7 +5,7 @@ import Link from "next/link"
 export default function Home() {
   return (
     <main className="relative flex min-h-[calc(100vh-4rem)] flex-col items-center justify-center px-4 py-16 md:py-24 text-center">
-      {/* Lekki gradient w tle */}
+      {/* Light gradient background */}
       <div className="absolute inset-0 bg-gradient-to-br from-background via-background to-muted/20 -z-10" />
 
       <div className="max-w-4xl mx-auto space-y-8 md:space-y-10">
@@ -18,19 +18,19 @@ export default function Home() {
         </p>
 
         <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto pt-4">
-          Projektuję i utrzymuję skalowalną infrastrukturę w chmurze (AWS), specjalizuję się w Terraformie, 
-          automatyzacji CI/CD oraz wysokodostępnych środowiskach.
+          I design and maintain scalable cloud infrastructure (AWS), specializing in Terraform, 
+          CI/CD automation, and high-availability environments.
         </p>
 
         <div className="flex flex-wrap justify-center gap-4 pt-8 md:pt-10">
           <Button size="lg" asChild>
             <Link href="/about">
-              O mnie <ArrowRight className="ml-2 h-5 w-5" />
+              About me <ArrowRight className="ml-2 h-5 w-5" />
             </Link>
           </Button>
 
           <Button size="lg" variant="outline" asChild>
-            <Link href="/contact">Skontaktuj się</Link>
+            <Link href="/contact">Contact me</Link>
           </Button>
         </div>
 

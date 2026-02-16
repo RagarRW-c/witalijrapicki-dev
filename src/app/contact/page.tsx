@@ -4,47 +4,36 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Paperclip, X, Loader2 } from "lucide-react"
 import { toast } from "sonner"
-import { useForm } from "react-hook-form"
-import { z } from "zod"
-import { zodResolver } from "@hookform/resolvers/zod"
 
 const API_ENDPOINT = "https://d5zxry52fj.execute-api.eu-central-1.amazonaws.com/prod/contact"
 
-const formSchema = z.object({
-  name: z.string().min(2, { message: "Imię musi mieć co najmniej 2 znaki" }).trim(),
-  email: z.string().email({ message: "Nieprawidłowy adres email" }).trim(),
-  subject: z.string().min(3, { message: "Temat musi mieć co najmniej 3 znaki" }).trim(),
-  message: z.string().min(10, { message: "Wiadomość musi mieć co najmniej 10 znaków" }).trim(),
-})
-
-type FormData = z.infer<typeof formSchema>
-
 export default function ContactPage() {
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    subject: "",
+    message: "",
+  })
+
   const [file, setFile] = useState<File | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const form = useForm<FormData>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      name: "",
-      email: "",
-      subject: "",
-      message: "",
-    },
-  })
-
-  const { register, handleSubmit, formState: { errors }, reset } = form
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    const { name, value } = e.target
+    setFormData((prev) => ({ ...prev, [name]: value }))
+  }
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0]
     if (!selectedFile) return
 
     if (selectedFile.size > 5 * 1024 * 1024) {
-      toast.error("Plik jest za duży (maks. 5 MB)")
+      toast.error("File is too large (max 5 MB)")
       e.target.value = ""
       return
     }
@@ -56,38 +45,59 @@ export default function ContactPage() {
     setFile(null)
   }
 
-  const onSubmit = async (data: FormData) => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    // Basic client-side validation
+    if (!formData.name.trim()) {
+      toast.error("Name is required")
+      return
+    }
+    if (!formData.email.includes("@") || !formData.email.includes(".")) {
+      toast.error("Enter a valid email address")
+      return
+    }
+    if (!formData.subject.trim()) {
+      toast.error("Subject is required")
+      return
+    }
+    if (!formData.message.trim()) {
+      toast.error("Message is required")
+      return
+    }
+
     setIsSubmitting(true)
 
     try {
-      const fd = new FormData()
-      fd.append("name", data.name)
-      fd.append("email", data.email)
-      fd.append("subject", data.subject)
-      fd.append("message", data.message)
+      const data = new FormData()
+      data.append("name", formData.name.trim())
+      data.append("email", formData.email.trim())
+      data.append("subject", formData.subject.trim())
+      data.append("message", formData.message.trim())
       if (file) {
-        fd.append("attachment", file)
+        data.append("attachment", file)
       }
 
       const response = await fetch(API_ENDPOINT, {
         method: "POST",
-        body: fd,
+        body: data,
       })
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
-        throw new Error(errorData.error || `Błąd HTTP: ${response.status}`)
+        throw new Error(errorData.error || `Server error (${response.status})`)
       }
 
       const result = await response.json()
-      toast.success(result.message || "Wiadomość wysłana!")
+      toast.success(result.message || "Message sent!")
 
-      reset()
+      // Reset form
+      setFormData({ name: "", email: "", subject: "", message: "" })
       setFile(null)
 
     } catch (err: any) {
-      console.error("Błąd wysyłania:", err)
-      toast.error(err.message || "Nie udało się wysłać wiadomości. Spróbuj ponownie.")
+      console.error("Sending error:", err)
+      toast.error(err.message || "Failed to send message. Try again.")
     } finally {
       setIsSubmitting(false)
     }
@@ -97,23 +107,23 @@ export default function ContactPage() {
     <div className="container py-12 md:py-20">
       <Card className="max-w-2xl mx-auto">
         <CardHeader>
-          <CardTitle className="text-3xl">Skontaktuj się ze mną</CardTitle>
+          <CardTitle className="text-3xl">Contact me</CardTitle>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <label htmlFor="name" className="text-sm font-medium">
-                  Imię
+                  Name
                 </label>
                 <Input
                   id="name"
-                  placeholder="Twoje imię"
-                  {...register("name")}
+                  name="name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  placeholder="Your name"
+                  required
                 />
-                {errors.name && (
-                  <p className="text-sm text-destructive">{errors.name.message}</p>
-                )}
               </div>
 
               <div className="space-y-2">
@@ -122,52 +132,52 @@ export default function ContactPage() {
                 </label>
                 <Input
                   id="email"
+                  name="email"
                   type="email"
-                  placeholder="twoj@email.com"
-                  {...register("email")}
+                  value={formData.email}
+                  onChange={handleChange}
+                  placeholder="your@email.com"
+                  required
                 />
-                {errors.email && (
-                  <p className="text-sm text-destructive">{errors.email.message}</p>
-                )}
               </div>
             </div>
 
             <div className="space-y-2">
               <label htmlFor="subject" className="text-sm font-medium">
-                Temat
+                Subject
               </label>
               <Input
                 id="subject"
-                placeholder="W czym mogę pomóc?"
-                {...register("subject")}
+                name="subject"
+                value={formData.subject}
+                onChange={handleChange}
+                placeholder="How can I help?"
+                required
               />
-              {errors.subject && (
-                <p className="text-sm text-destructive">{errors.subject.message}</p>
-              )}
             </div>
 
             <div className="space-y-2">
               <label htmlFor="message" className="text-sm font-medium">
-                Wiadomość
+                Message
               </label>
               <Textarea
                 id="message"
-                placeholder="Opisz swoją sprawę..."
+                name="message"
+                value={formData.message}
+                onChange={handleChange}
+                placeholder="Describe your matter..."
                 rows={6}
-                {...register("message")}
+                required
               />
-              {errors.message && (
-                <p className="text-sm text-destructive">{errors.message.message}</p>
-              )}
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Załącznik (opcjonalny, max 5 MB)</label>
+              <label className="text-sm font-medium">Attachment (optional, max 5 MB)</label>
               <div className="flex items-center gap-3">
                 <label className="cursor-pointer">
                   <div className="flex items-center gap-2 px-4 py-2 border rounded-md hover:bg-accent transition-colors">
                     <Paperclip className="h-4 w-4" />
-                    <span>Wybierz plik</span>
+                    <span>Select file</span>
                   </div>
                   <input
                     type="file"
@@ -193,7 +203,7 @@ export default function ContactPage() {
                 )}
               </div>
               <p className="text-xs text-muted-foreground">
-                Dozwolone formaty: PDF, DOC, TXT, JPG, PNG
+                Allowed formats: PDF, DOC, TXT, JPG, PNG
               </p>
             </div>
 
@@ -205,10 +215,10 @@ export default function ContactPage() {
               {isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Wysyłanie...
+                  Sending...
                 </>
               ) : (
-                "Wyślij wiadomość"
+                "Send message"
               )}
             </Button>
           </form>

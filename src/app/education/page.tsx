@@ -21,26 +21,26 @@ const certifications = [
   {
     name: "Terraform Associate Certification",
     issuer: "HashiCorp",
-    status: "w trakcie zdobywania",
+    status: "in progress",
     planned: "2026",
   },
   {
     name: "AWS Certified Solutions Architect / Developer",
     issuer: "Amazon Web Services",
-    status: "planowany",
+    status: "planned",
     planned: "2026 / 2027",
   },
   {
     name: "Docker Certified Associate",
     issuer: "Docker Inc.",
-    status: "planowany",
-    planned: "po AWS",
+    status: "planned",
+    planned: "after AWS",
   },
   {
     name: "Certified Kubernetes Administrator (CKA)",
     issuer: "Cloud Native Computing Foundation",
-    status: "planowany",
-    planned: "na końcu",
+    status: "planned",
+    planned: "at the end",
   },
 ]
 
@@ -48,14 +48,14 @@ export default function EducationPage() {
   return (
     <div className="container py-12 md:py-20">
       <h1 className="text-4xl md:text-5xl font-bold text-center mb-12 md:mb-16">
-        Edukacja & Certyfikaty
+        Education & Certifications
       </h1>
 
-      {/* Edukacja */}
+      {/* Education */}
       <section className="mb-16 md:mb-20">
         <h2 className="text-3xl md:text-4xl font-semibold text-center mb-8 flex items-center justify-center gap-3">
           <GraduationCap className="h-8 w-8 text-primary" />
-          Edukacja
+          Education
         </h2>
 
         <div className="grid gap-6 md:grid-cols-2 max-w-4xl mx-auto">
@@ -67,10 +67,10 @@ export default function EducationPage() {
               </CardHeader>
               <CardContent className="space-y-2">
                 <p className="text-muted-foreground">
-                  <strong>Kierunek:</strong> {edu.field}
+                  <strong>Field:</strong> {edu.field}
                 </p>
                 <p className="text-muted-foreground">
-                  <strong>Okres:</strong> {edu.period}
+                  <strong>Period:</strong> {edu.period}
                 </p>
               </CardContent>
             </Card>
@@ -78,11 +78,11 @@ export default function EducationPage() {
         </div>
       </section>
 
-      {/* Certyfikaty */}
+      {/* Certifications */}
       <section>
         <h2 className="text-3xl md:text-4xl font-semibold text-center mb-8 flex items-center justify-center gap-3">
           <Award className="h-8 w-8 text-primary" />
-          Certyfikaty
+          Certifications
         </h2>
 
         <div className="max-w-4xl mx-auto space-y-6">
@@ -91,7 +91,7 @@ export default function EducationPage() {
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-xl">{cert.name}</CardTitle>
-                  <Badge variant={cert.status.includes("w trakcie") ? "default" : "secondary"}>
+                  <Badge variant={cert.status.includes("in progress") ? "default" : "secondary"}>
                     {cert.status}
                   </Badge>
                 </div>
@@ -99,7 +99,7 @@ export default function EducationPage() {
               </CardHeader>
               <CardContent>
                 <p className="text-muted-foreground">
-                  <strong>Planowany termin:</strong> {cert.planned}
+                  <strong>Planned date:</strong> {cert.planned}
                 </p>
               </CardContent>
             </Card>
@@ -107,7 +107,7 @@ export default function EducationPage() {
         </div>
 
         <p className="text-center text-muted-foreground mt-8 italic">
-          Lista będzie się aktualizować w miarę zdobywania kolejnych certyfikatów 🚀
+          The list will be updated as new certifications are obtained 🚀
         </p>
       </section>
     </div>

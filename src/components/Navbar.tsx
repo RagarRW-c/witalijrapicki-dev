@@ -7,11 +7,11 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { Menu } from "lucide-react"
 
 const navItems = [
-  { href: "/about", label: "O mnie" },
-  { href: "/experience", label: "Doświadczenie" },
-  { href: "/skills", label: "Umiejętności" },
-  { href: "/education", label: "Edukacja & Certyfikaty" },
-  { href: "/contact", label: "Kontakt" },
+  { href: "/about", label: "About me" },
+  { href: "/experience", label: "Experience" },
+  { href: "/skills", label: "Skills" },
+  { href: "/education", label: "Education & Certifications" },
+  { href: "/contact", label: "Contact" },
 ]
 
 export function Navbar() {
@@ -44,7 +44,7 @@ export function Navbar() {
             <SheetTrigger asChild className="md:hidden">
               <Button variant="ghost" size="icon">
                 <Menu className="h-6 w-6" />
-                <span className="sr-only">Otwórz menu</span>
+                <span className="sr-only">Open menu</span>
               </Button>
             </SheetTrigger>
             <SheetContent side="right" className="w-[300px] sm:w-[400px]">

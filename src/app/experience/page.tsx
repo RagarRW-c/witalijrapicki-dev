@@ -9,16 +9,16 @@ const experiences = [
   {
     title: "Cloud Engineer",
     company: "Microsecond S.C.",
-    period: "03/2022 – obecnie",
+    period: "03/2022 – present",
     icon: Cloud,
     points: [
-      "Projektowanie i utrzymywanie infrastruktury jako kod przy użyciu Terraform modules",
-      "Wdrażanie statycznych aplikacji React na AWS (S3 + CloudFront + ACM + Route53)",
-      "Automatyzacja provisioningu zasobów AWS (IaC)",
-      "Konfiguracja i monitoring usług: EC2, VPC, S3, RDS, Lambda",
-      "Zarządzanie pipeline’ami CI/CD (AWS CodePipeline, GitHub Actions, GitLab CI)",
-      "Rozwiązywanie problemów sieciowych w VPC, subnets, security groups",
-      "Zarządzanie backupami i disaster recovery (EBS, RDS)",
+      "Designing and maintaining infrastructure as code using Terraform modules",
+      "Deploying static React applications on AWS (S3 + CloudFront + ACM + Route53)",
+      "Automation of AWS resource provisioning (IaC)",
+      "Configuration and monitoring of services: EC2, VPC, S3, RDS, Lambda",
+      "Managing CI/CD pipelines (AWS CodePipeline, GitHub Actions, GitLab CI)",
+      "Troubleshooting network issues in VPC, subnets, security groups",
+      "Managing backups and disaster recovery (EBS, RDS)",
     ],
   },
   {
@@ -27,13 +27,13 @@ const experiences = [
     period: "03/2017 – 02/2022",
     icon: Server,
     points: [
-      "Projektowanie i wdrażanie rozwiązań sieciowych high-availability (LAN, WAN, WLAN)",
-      "Konfiguracja routerów, switchy, firewalli (Cisco, Unifi, MikroTik)",
-      "Zarządzanie usługami: DHCP, DNS, NTP",
-      "Konfiguracja polityk bezpieczeństwa (firewalle, ACL, SSL/TLS)",
-      "Budowa połączeń hybrydowych (Site-to-Site VPN, Direct Connect)",
-      "Zarządzanie zdalnym dostępem (VPN, SSH, RDP)",
-      "Administracja systemami Linux / Windows / macOS",
+      "Designing and implementing high-availability network solutions (LAN, WAN, WLAN)",
+      "Configuring routers, switches, firewalls (Cisco, Unifi, MikroTik)",
+      "Managing services: DHCP, DNS, NTP",
+      "Configuring security policies (firewalls, ACL, SSL/TLS)",
+      "Building hybrid connections (Site-to-Site VPN, Direct Connect)",
+      "Managing remote access (VPN, SSH, RDP)",
+      "Administration of Linux / Windows / macOS systems",
     ],
   },
   {
@@ -42,16 +42,16 @@ const experiences = [
     period: "12/2016 – 02/2017",
     icon: Briefcase,
     points: [
-      "Wsparcie użytkowników (tickety, email, telefon)",
-      "Administracja Active Directory",
-      "Wsparcie techniczne Windows / macOS / Linux",
-      "Rutynowa konserwacja sprzętu i naprawa błędów oprogramowania",
-      "Backup i odzyskiwanie danych",
+      "User support (tickets, email, phone)",
+      "Active Directory administration",
+      "Technical support for Windows / macOS / Linux",
+      "Routine hardware maintenance and software error repair",
+      "Data backup and recovery",
     ],
   },
 ]
 
-// warianty animacji dla kart (każda kolejna pojawia się z lekkim opóźnieniem)
+// Animation variants for cards (each subsequent one appears with a slight delay)
 const cardVariants = {
   hidden: { opacity: 0, y: 40 },
   visible: (i: number) => ({
@@ -69,11 +69,11 @@ export default function ExperiencePage() {
   return (
     <div className="container px-4 py-10 md:py-16 lg:py-20">
       <h1 className="text-4xl md:text-5xl font-bold text-center mb-12 md:mb-16">
-        Doświadczenie zawodowe
+        Professional Experience
       </h1>
 
       <div className="relative mx-auto max-w-5xl">
-        {/* Linia pionowa – delikatny gradient */}
+        {/* Vertical line – subtle gradient */}
         <div className="absolute left-5 md:left-1/2 h-full w-0.5 bg-gradient-to-b from-primary/20 via-primary/40 to-primary/20 transform -translate-x-1/2" />
 
         <div className="space-y-12 md:space-y-16 lg:space-y-20">
@@ -89,12 +89,12 @@ export default function ExperiencePage() {
                 index % 2 === 0 ? "md:flex-row" : "md:flex-row-reverse"
               }`}
             >
-              {/* Kropka z ikoną i ringiem */}
+              {/* Dot with icon and ring */}
               <div className="absolute left-5 md:left-1/2 w-11 h-11 rounded-full bg-background border-4 border-primary/60 flex items-center justify-center transform -translate-x-1/2 z-10 transition-all duration-300 group-hover:scale-110 group-hover:border-cyan-500/70">
                 <exp.icon className="h-5 w-5 text-primary group-hover:text-cyan-400 transition-colors" />
               </div>
 
-              {/* Data i stanowisko */}
+              {/* Date and position */}
               <div
                 className={`w-full md:w-5/12 pl-14 md:pl-0 ${
                   index % 2 === 0 ? "md:text-right md:pr-10 lg:pr-12" : "md:pl-10 lg:pl-12"
@@ -107,7 +107,7 @@ export default function ExperiencePage() {
                 <p className="text-muted-foreground text-base md:text-lg">{exp.company}</p>
               </div>
 
-              {/* Karta z neonowym hover */}
+              {/* Card with neon hover */}
               <Card
                 className={`w-full md:w-6/12 bg-card/70 backdrop-blur-md border border-border/40 shadow-md transition-all duration-300 
                   group-hover:shadow-[0_0_25px_-5px] group-hover:shadow-cyan-500/20 
