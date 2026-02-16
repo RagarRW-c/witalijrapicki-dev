@@ -1,6 +1,14 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+"use client"
+
+import { motion } from "framer-motion"
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion"
 import { Badge } from "@/components/ui/badge"
-import { GraduationCap, Award } from "lucide-react"
+import { GraduationCap, Award, Calendar, BookOpen } from "lucide-react"
 
 const education = [
   {
@@ -8,12 +16,14 @@ const education = [
     school: "High School of Banking and Management in Cracow",
     field: "Computer Science",
     period: "03/2018 – 11/2020",
+    badges: ["Management", "IT Strategy"],  // Optional badges for highlights
   },
   {
     degree: "Bachelor Degree - Operating Systems and Networks",
     school: "High School of Banking and Management in Cracow",
     field: "Computer Science",
     period: "08/2013 – 10/2017",
+    badges: ["Networks", "Operating Systems"],
   },
 ]
 
@@ -23,26 +33,40 @@ const certifications = [
     issuer: "HashiCorp",
     status: "in progress",
     planned: "2026",
+    badges: ["IaC", "Cloud"],  // Badges for skills covered
   },
   {
     name: "AWS Certified Solutions Architect / Developer",
     issuer: "Amazon Web Services",
     status: "planned",
     planned: "2026 / 2027",
+    badges: ["AWS", "Architecture"],
   },
   {
     name: "Docker Certified Associate",
     issuer: "Docker Inc.",
     status: "planned",
     planned: "after AWS",
+    badges: ["Containers", "DevOps"],
   },
   {
     name: "Certified Kubernetes Administrator (CKA)",
     issuer: "Cloud Native Computing Foundation",
     status: "planned",
     planned: "at the end",
+    badges: ["Kubernetes", "Orchestration"],
   },
 ]
+
+const badgeVariants = {
+  hidden: { opacity: 0, scale: 0.8, y: 8 },
+  visible: (i: number) => ({
+    opacity: 1,
+    scale: 1,
+    y: 0,
+    transition: { delay: i * 0.05, duration: 0.3 },
+  }),
+}
 
 export default function EducationPage() {
   return (
@@ -51,60 +75,124 @@ export default function EducationPage() {
         Education & Certifications
       </h1>
 
-      {/* Education */}
+      {/* Education Section */}
       <section className="mb-16 md:mb-20">
         <h2 className="text-3xl md:text-4xl font-semibold text-center mb-8 flex items-center justify-center gap-3">
           <GraduationCap className="h-8 w-8 text-primary" />
           Education
         </h2>
 
-        <div className="grid gap-6 md:grid-cols-2 max-w-4xl mx-auto">
-          {education.map((edu) => (
-            <Card key={edu.degree} className="bg-card/80 backdrop-blur-sm border-border/50">
-              <CardHeader>
-                <CardTitle className="text-xl md:text-2xl">{edu.degree}</CardTitle>
-                <CardDescription className="text-base">{edu.school}</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <p className="text-muted-foreground">
-                  <strong>Field:</strong> {edu.field}
-                </p>
-                <p className="text-muted-foreground">
-                  <strong>Period:</strong> {edu.period}
-                </p>
-              </CardContent>
-            </Card>
+        <Accordion type="single" collapsible className="w-full max-w-4xl mx-auto space-y-4">
+          {education.map((edu, index) => (
+            <motion.div
+              key={edu.degree}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true }}
+              variants={badgeVariants as any}
+            >
+              <AccordionItem value={edu.degree} className="border-border/50">
+                <AccordionTrigger className="hover:no-underline">
+                  <div className="flex items-center gap-3">
+                    <Calendar className="h-5 w-5 text-primary" />
+                    <span className="text-left">
+                      <h3 className="text-xl font-semibold">{edu.degree}</h3>
+                      <p className="text-sm text-muted-foreground">{edu.school}</p>
+                    </span>
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="pt-4">
+                  <div className="space-y-3">
+                    <p className="text-muted-foreground">
+                      <strong>Field:</strong> {edu.field}
+                    </p>
+                    <p className="text-muted-foreground">
+                      <strong>Period:</strong> {edu.period}
+                    </p>
+                    {edu.badges && (
+                      <div className="flex flex-wrap gap-2 pt-2">
+                        {edu.badges.map((badge, i) => (
+                          <motion.div
+                            key={badge}
+                            custom={i}
+                            initial="hidden"
+                            whileInView="visible"
+                            variants={badgeVariants as any}
+                          >
+                            <Badge variant="secondary" className="text-xs">
+                              {badge}
+                            </Badge>
+                          </motion.div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            </motion.div>
           ))}
-        </div>
+        </Accordion>
       </section>
 
-      {/* Certifications */}
+      {/* Certifications Section */}
       <section>
         <h2 className="text-3xl md:text-4xl font-semibold text-center mb-8 flex items-center justify-center gap-3">
           <Award className="h-8 w-8 text-primary" />
           Certifications
         </h2>
 
-        <div className="max-w-4xl mx-auto space-y-6">
-          {certifications.map((cert) => (
-            <Card key={cert.name} className="bg-card/80 backdrop-blur-sm border-border/50">
-              <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-xl">{cert.name}</CardTitle>
-                  <Badge variant={cert.status.includes("in progress") ? "default" : "secondary"}>
-                    {cert.status}
-                  </Badge>
-                </div>
-                <CardDescription>{cert.issuer}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">
-                  <strong>Planned date:</strong> {cert.planned}
-                </p>
-              </CardContent>
-            </Card>
+        <Accordion type="single" collapsible className="w-full max-w-4xl mx-auto space-y-4">
+          {certifications.map((cert, index) => (
+            <motion.div
+              key={cert.name}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true }}
+              variants={badgeVariants as any}
+            >
+              <AccordionItem value={cert.name} className="border-border/50">
+                <AccordionTrigger className="hover:no-underline">
+                  <div className="flex items-center gap-3">
+                    <BookOpen className="h-5 w-5 text-primary" />
+                    <span className="text-left">
+                      <h3 className="text-xl font-semibold">{cert.name}</h3>
+                      <p className="text-sm text-muted-foreground">{cert.issuer}</p>
+                    </span>
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="pt-4">
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Badge variant={cert.status === "in progress" ? "default" : "secondary"}>
+                        {cert.status.charAt(0).toUpperCase() + cert.status.slice(1)}
+                      </Badge>
+                      <p className="text-sm text-muted-foreground">
+                        Planned: {cert.planned}
+                      </p>
+                    </div>
+                    {cert.badges && (
+                      <div className="flex flex-wrap gap-2 pt-2">
+                        {cert.badges.map((badge, i) => (
+                          <motion.div
+                            key={badge}
+                            custom={i}
+                            initial="hidden"
+                            whileInView="visible"
+                            variants={badgeVariants as any}
+                          >
+                            <Badge variant="outline" className="text-xs">
+                              {badge}
+                            </Badge>
+                          </motion.div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            </motion.div>
           ))}
-        </div>
+        </Accordion>
 
         <p className="text-center text-muted-foreground mt-8 italic">
           The list will be updated as new certifications are obtained 🚀
