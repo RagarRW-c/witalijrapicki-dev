@@ -30,7 +30,7 @@ export default function NotFound() {
         viewport={{ once: true }}
         className="max-w-md w-full space-y-8 text-center"
       >
-        {/* Icon with animation */}
+        {/* Icon */}
         <motion.div variants={itemVariants}>
           <AlertTriangle className="h-24 w-24 mx-auto text-destructive mb-4" />
         </motion.div>
@@ -65,7 +65,7 @@ export default function NotFound() {
                 <Button variant="ghost" size="sm" asChild>
                   <Link href="/about">
                     <Search className="mr-2 h-4 w-4" />
-                    Search Projects
+                    About Me
                   </Link>
                 </Button>
               </div>
@@ -73,7 +73,7 @@ export default function NotFound() {
           </Card>
         </motion.div>
 
-        {/* Fun footer */}
+        {/* Footer */}
         <motion.p
           variants={itemVariants}
           className="text-sm text-muted-foreground italic"
