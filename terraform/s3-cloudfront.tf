@@ -161,6 +161,15 @@ resource "aws_cloudfront_distribution" "cdn" {
   }
 
   # Custom error pages (404)
+   # S3 private bucket → brak pliku = 403
+  custom_error_response {
+    error_code            = 403
+    response_code         = 404
+    response_page_path    = "/404.html"
+    error_caching_min_ttl = 0
+  }
+
+  # Prawdziwe 404 (np. jeśli origin kiedyś zwróci 404)
   custom_error_response {
     error_code            = 404
     response_code         = 404
