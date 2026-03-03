@@ -13,7 +13,9 @@ type Project = {
   description: string
   stack: string[]
   link: string
-  image?: string  // Opcjonalny – fix dla TS
+  liveLink?: string  // Opcjonalny link do live strony
+  image?: string  // Opcjonalny obrazek
+  video?: string  // Opcjonalny filmik (MP4/GIF) – nowy
 }
 
 const projects: Project[] = [
@@ -22,14 +24,13 @@ const projects: Project[] = [
     description: "Reusable Terraform module for VPC setup with subnets, security groups, and NAT gateways. Used in production for multi-env deployments.",
     stack: ["Terraform", "AWS VPC", "IaC", "Modules"],
     link: "https://github.com/RagarRW-c/terraform-vpc-module",
-    image: "/projects/vpc-diagram.png",  // Dodaj plik do /public/projects/ jeśli masz
+    image: "/projects/vpc-diagram.png",
   },
   {
     title: "Next.js Portfolio with AWS Backend",
     description: "This site – static export to S3/CloudFront, contact form with Lambda/SES (multipart attachments). Full IaC with Terraform.",
     stack: ["Next.js", "AWS Lambda", "SES", "Terraform", "shadcn/ui"],
     link: "https://github.com/RagarRW-c/witalijrapicki-dev",
-    // Brak image – nie błąd
   },
   {
     title: "CI/CD Pipeline for React App",
@@ -37,6 +38,15 @@ const projects: Project[] = [
     stack: ["GitHub Actions", "AWS S3", "CloudFront", "Terraform"],
     link: "https://github.com/RagarRW-c/react-ci-cd",
     image: "/projects/pipeline-diagram.png",
+  },
+  // Nowy projekt: Typrr z filmikiem zamiast image
+  {
+    title: "Typrr – Cloud-Native Typing Platform",
+    description: "Production-ready full-stack application for measuring typing speed and accuracy, designed in cloud-native architecture and deployed on AWS using Infrastructure as Code. Combines web app development with production environment including autoscaling, HTTPS, monitoring, logging, and secure secret management.",
+    stack: ["React", "TypeScript", "Vite", "Nginx", "Node.js", "Express", "Prisma ORM", "JWT", "SQLite", "PostgreSQL", "AWS ECS Fargate", "ALB", "Route53", "ACM", "RDS", "S3", "CloudWatch", "Secrets Manager", "Terraform", "Docker"],
+    link: "https://github.com/RagarRW-c/typrr",
+    liveLink: "https://typrr.cloud",
+    video: "https://i.imgur.com/NcVQTqh.gif",  // Looping GIF demo typing test – działa jako <video src>
   },
 ]
 
@@ -72,7 +82,18 @@ export default function ProjectsPage() {
         {projects.map((proj, index) => (
           <motion.div key={proj.title} variants={cardVariants}>
             <Card className="h-full border-border/50 hover:border-primary/50 transition-colors">
-              {proj.image ? (
+              {proj.video ? (
+                <div className="relative h-48 overflow-hidden rounded-t-xl">
+                  <video
+                    src={proj.video}
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    className="object-cover w-full h-full"
+                  />
+                </div>
+              ) : proj.image ? (
                 <div className="relative h-48 overflow-hidden rounded-t-xl">
                   <Image
                     src={proj.image}
@@ -104,6 +125,13 @@ export default function ProjectsPage() {
                       View on GitHub <Github className="ml-2 h-3 w-3" />
                     </a>
                   </Button>
+                  {proj.liveLink && (
+                    <Button variant="ghost" size="sm" asChild>
+                      <a href={proj.liveLink} target="_blank" rel="noopener noreferrer">
+                        View Live <ExternalLink className="ml-2 h-3 w-3" />
+                      </a>
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>

@@ -1,9 +1,11 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  output: 'export',  // Włącza static export – next build generuje /out
+  output: 'export',  
   reactCompiler: true,
-  // Inne opcje...
+  images: {
+    unoptimized: true,  
+  },
 };
 
 export default nextConfig;
