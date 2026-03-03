@@ -2,7 +2,9 @@ name: Deploy to S3 & CloudFront
 
 on:
   push:
-    branches: [ "feature/contact-form-integration" ]
+    branches: [ "main" ]
+    paths-ignore: 
+      - 'terraform/**'
 
 jobs:
   deploy:
