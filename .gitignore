@@ -27,7 +27,10 @@ yarn-error.log*
 *.swo
 
 # Terraform
-.terraform/
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+*.tfplan
 terraform.tfstate
 terraform.tfstate.backup
-*.tfstate.*
+tfplan
