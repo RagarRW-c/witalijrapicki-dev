@@ -21,7 +21,7 @@ resource "aws_iam_role" "github_actions_role" {
         Condition = {
           StringEquals = {
             "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
-            "token.actions.githubusercontent.com:sub" = "repo:RagarRW-c/witalijrapicki-dev:ref:refs/heads/feature/contact-form-integration"
+            "token.actions.githubusercontent.com:sub" = "repo:RagarRW-c/witalijrapicki-dev:ref:refs/heads/main"
           }
         }
       }
